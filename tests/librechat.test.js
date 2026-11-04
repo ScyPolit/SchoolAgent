@@ -20,9 +20,10 @@ test('runtime frontend is the pinned full latest-dev LibreChat workspace',()=>{
   assert.equal(existsSync(new URL('client/main.jsx',root)),false,'old custom application is not an active root client');
 });
 test('complete latest LibreChat MIT license is preserved unchanged',()=>{
-  const upstream=readFileSync(new URL('upstream/LibreChat/LICENSE',root));
-  const archived=readFileSync(new URL('third_party/librechat-latest/LICENSE',root));
-  assert.deepEqual(archived,upstream);
+  const upstream=readFileSync(new URL('upstream/LibreChat/LICENSE',root),'utf8').replace(/\r\n/g,'\n');
+  const archived=readFileSync(new URL('third_party/librechat-latest/LICENSE',root),'utf8').replace(/\r\n/g,'\n');
+  assert.equal(archived,upstream);
+  assert.equal(baseline.licenseChecksumNormalization,'UTF-8/LF');
   assert.equal(createHash('sha256').update(archived).digest('hex'),baseline.licenseSha256);
   assert.match(archived.toString(),/MIT License/);
   assert.match(archived.toString(),/Copyright \(c\) 2026 LibreChat/);

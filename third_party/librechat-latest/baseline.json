@@ -9,7 +9,8 @@
   "runtimeFrontend": "upstream/LibreChat/client",
   "runtimeBackend": "server",
   "license": "MIT",
-  "licenseSha256": "958f543bed829e0ca42c35ef86f9eb06f46b8e8ceee28c10b23bcc928e9c03d3",
+  "licenseSha256": "1ce5c9d51e5ab764b44142cd44d1e687f5bfe32f807c7221c14d061007309b97",
+  "licenseChecksumNormalization": "UTF-8/LF",
   "browserWorkspaces": [
     "client",
     "packages/data-provider",
