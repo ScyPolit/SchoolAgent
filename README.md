@@ -8,7 +8,7 @@
 
 A self-hosted campus AI agent portal built on the full LibreChat client.
 
-[![CI](https://github.com/ScyPolit/SchoolAgent/actions/workflows/ci.yml/badge.svg)](https://github.com/ScyPolit/SchoolAgent/actions/workflows/ci.yml)
+[![CI](https://github.com/ScyPolit/SchoolAgent/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ScyPolit/SchoolAgent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-2563eb.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A524-43853d?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![LibreChat](https://img.shields.io/badge/LibreChat-v0.8.9--rc1-111827)](docs/librechat-latest.md)
@@ -68,7 +68,7 @@ SchoolAgent 面向需要统一使用多个智能体的学校：业务知识、�
 ## 技术架构
 
 ```mermaid
-flowchart LR
+flowchart TB
     User[电脑 / 手机 Web] --> Proxy[学校 HTTPS / VPN 入口]
     Proxy --> Client[完整 LibreChat 客户端]
     Client --> API[SchoolAgent API / 原生兼容层]
