@@ -1,0 +1,215 @@
+{
+  "project": "LibreChat",
+  "repository": "https://github.com/LibreChat-AI/LibreChat",
+  "tag": "v0.8.1",
+  "commit": "b288d81f5a4625403bc880e93059d90d9aa51fe3",
+  "license": "MIT",
+  "files": [
+    {
+      "upstream": "client/src/components/Chat/Messages/SiblingSwitch.tsx",
+      "local": "upstream/client/src/components/Chat/Messages/SiblingSwitch.tsx",
+      "blobSha": "ba94a06a949e9745850256f8b1a354c42dca7eb8",
+      "sha256": "cd9e9384d67f325398ff20adfba18fd5d47b7d575a251850f5ee60aef1a7f0bd"
+    },
+    {
+      "upstream": "client/src/components/Chat/Messages/Content/MarkdownLite.tsx",
+      "local": "upstream/client/src/components/Chat/Messages/Content/MarkdownLite.tsx",
+      "blobSha": "65efe2f2560cc69dfb90aa4b50cd94fdeeb47d9a",
+      "sha256": "b4697590f5b70560cb6a0d82c0dc4c83b6f6ccb22b34e6d4a396900fc58896bb"
+    },
+    {
+      "upstream": "client/src/components/Chat/Messages/Content/MarkdownErrorBoundary.tsx",
+      "local": "upstream/client/src/components/Chat/Messages/Content/MarkdownErrorBoundary.tsx",
+      "blobSha": "0342c60f8a2b1dd500ebddeeadc8fb957d233a54",
+      "sha256": "969a34f9ddbd26d0dc545ffb683e9a0ed359396d4b6521a89d7f1f9e3f1ed239"
+    },
+    {
+      "upstream": "client/src/hooks/Input/useTextarea.ts",
+      "local": "upstream/client/src/hooks/Input/useTextarea.ts",
+      "blobSha": "7d32cbbe02d7099f466d2449de773eac5ebb9755",
+      "sha256": "6c6c886e04d94b675f09aa85b78fdab5bdaf45ceaaf86574e436718f8523ef62"
+    },
+    {
+      "upstream": "client/src/hooks/Artifacts/useAutoScroll.ts",
+      "local": "upstream/client/src/hooks/Artifacts/useAutoScroll.ts",
+      "blobSha": "1ddb9feb989b09f2a22c6c3d9ce64a4e81b11fa2",
+      "sha256": "f908aec21f12d0256216f9842b13cdd2bf181d0bebe5fcb287fb1d3aab58dfd3"
+    },
+    {
+      "upstream": "LICENSE",
+      "local": "LICENSE",
+      "blobSha": "535850a920a0e5de815aaa437d9c5e2abbf0f01a",
+      "sha256": "5e03ea42037f167747a673cca873970962bb36e4d538ade169c96d1c4b305fe8"
+    },
+    {
+      "local": "upstream/client/src/style.css",
+      "sha256": "e742253111c61ccc145d621517f3b56ed8de79fd48a2b94994e7a5777677756a",
+      "upstream": "client/src/style.css",
+      "blobSha": "2a4550f430b817d32d0d9287867ec0a4a73dd864"
+    },
+    {
+      "local": "upstream/client/tailwind.config.cjs",
+      "sha256": "e587d7bc721978ca73838d0184f093319417e757ed01471dbeacfecd11e0318f",
+      "upstream": "client/tailwind.config.cjs",
+      "blobSha": "c30d2ca703d6b425bb7c2a19cde0c009cb96356e"
+    },
+    {
+      "local": "upstream/client/src/mobile.css",
+      "sha256": "167a5b159e2d58bea38d52cb742744f9299afb65b557564eb5b375eb02cdcb6e",
+      "upstream": "client/src/mobile.css",
+      "blobSha": "ce9afee97103f8775acbeebf0e9e139e4e821444"
+    },
+    {
+      "local": "upstream/packages/client/src/theme/context/ThemeProvider.tsx",
+      "sha256": "495b2fef9b3776d1debf43ae728a40fc73c06e13a429b93359181ce65855472d",
+      "upstream": "packages/client/src/theme/context/ThemeProvider.tsx",
+      "blobSha": "c803796164c8efe3bbdf535865c489763ba9cdf1"
+    },
+    {
+      "local": "upstream/packages/client/src/theme/atoms/themeAtoms.ts",
+      "sha256": "0a6258929280a8bf9ddf14eec1608bef989696ec9cb4b5253ac5fdace4d7cbc8",
+      "upstream": "packages/client/src/theme/atoms/themeAtoms.ts",
+      "blobSha": "316d092fb0254b0f717bbec713804c481d0b0d74"
+    },
+    {
+      "local": "upstream/packages/client/src/theme/themes/default.ts",
+      "sha256": "88fd0784a4c49241aba0f73c3326d99f3a317dfacc0208a7f7fbe59a23e88f4a",
+      "upstream": "packages/client/src/theme/themes/default.ts",
+      "blobSha": "d636cc0c2ebc3e8674c84ce9cf879259cdfe813d"
+    },
+    {
+      "local": "upstream/packages/client/src/theme/themes/dark.ts",
+      "sha256": "57b1d2794de1471468456af63c2d51aa2a38e3fada0375998d03b91f548acd09",
+      "upstream": "packages/client/src/theme/themes/dark.ts",
+      "blobSha": "150fee69c79fc76fbcda967dd50d4e8fe03d0ae4"
+    },
+    {
+      "local": "upstream/packages/client/src/components/ThemeSelector.tsx",
+      "sha256": "eeeaadd87f57e4b0c7a08f129484097d2eee9414b615caf2e93141db50f0ee4a",
+      "upstream": "packages/client/src/components/ThemeSelector.tsx",
+      "blobSha": "e05baab7d59d1cef887f3765d4e33296d208cdb9"
+    },
+    {
+      "local": "upstream/client/src/components/Nav/Nav.tsx",
+      "sha256": "a58ad8766135033549bbca2373d179baaa90b6fad14b902940d65fee4b4c21e5",
+      "upstream": "client/src/components/Nav/Nav.tsx",
+      "blobSha": "e4499041436a616057b859551e05abc1dc1c4a9a"
+    },
+    {
+      "local": "upstream/client/src/components/Chat/Input/ChatForm.tsx",
+      "sha256": "ed1c8ed584a6c0322fcdcfdfe314897d89cdb2982a7f950c93a8e70529bdf89e",
+      "upstream": "client/src/components/Chat/Input/ChatForm.tsx",
+      "blobSha": "edd12bd3ac66b23f1f8cb43eea4dd1b67df15688"
+    },
+    {
+      "local": "upstream/client/src/components/Chat/Input/SendButton.tsx",
+      "sha256": "bbec9d5168b6a296f1fe0fee815a07de02f34977b3247a6eb57f6fbc04270c3f",
+      "upstream": "client/src/components/Chat/Input/SendButton.tsx",
+      "blobSha": "14c21f05867267760302ff814ab7454946135bcb"
+    },
+    {
+      "local": "upstream/packages/client/src/components/Button.tsx",
+      "sha256": "693a266c34e9e75708b14565539108ce6cce21dbc8e8ec2d0c21ff6420fe9586",
+      "upstream": "packages/client/src/components/Button.tsx",
+      "blobSha": "28f1506901eb7fac1296eb6aa3cdf8f4311059a5"
+    },
+    {
+      "local": "upstream/packages/client/src/components/Input.tsx",
+      "sha256": "b4b2e79660ef3280489aaf921f344e58b282fdd29e13fce1cdffeb796b0e4c8f",
+      "upstream": "packages/client/src/components/Input.tsx",
+      "blobSha": "10c765c1fbf109fc1bad36b05bcdce84b0a8c739"
+    },
+    {
+      "local": "upstream/client/public/assets/logo.svg",
+      "sha256": "6f22e946415022a4fb499d9da48eea61fead6e65eb449b53ec78d95b0f6e4f70",
+      "upstream": "client/public/assets/logo.svg",
+      "blobSha": "36a536d654bf0ad283ddb5d7972556ea6cd0b633",
+      "runtime": "client/vendor/librechat/LibreChatLogo.svg"
+    },
+    {
+      "local": "fonts/Inter-OFL.txt",
+      "sha256": "262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a",
+      "source": "https://github.com/rsms/inter/blob/v4.1/LICENSE.txt"
+    },
+    {
+      "local": "fonts/RobotoMono-OFL.txt",
+      "sha256": "50ab8dd54680d3473f649c9db86fece88434d097c7834475c1c72d2f8c429215",
+      "source": "https://github.com/google/fonts/blob/main/ofl/robotomono/OFL.txt"
+    },
+    {
+      "upstream": "client/public/fonts/Inter-Bold.woff2",
+      "local": "upstream/client/public/fonts/Inter-Bold.woff2",
+      "runtime": "client/vendor/librechat/fonts/Inter-Bold.woff2",
+      "blobSha": "0f1b157633c5f8485fe9e79585daa89666cc07f6",
+      "sha256": "220976705fbec109f43c5cfdceca639e99ace7e51f3eb67292b105d3575eb39b"
+    },
+    {
+      "upstream": "client/public/fonts/Inter-BoldItalic.woff2",
+      "local": "upstream/client/public/fonts/Inter-BoldItalic.woff2",
+      "runtime": "client/vendor/librechat/fonts/Inter-BoldItalic.woff2",
+      "blobSha": "bc50f24c8731ec8cbf75effb9cdc2b6129b65dfb",
+      "sha256": "af46bd584de8bb0aabfdab5c8651f943b089d09959ba30ae75454689c56f3bd2"
+    },
+    {
+      "upstream": "client/public/fonts/Inter-Italic.woff2",
+      "local": "upstream/client/public/fonts/Inter-Italic.woff2",
+      "runtime": "client/vendor/librechat/fonts/Inter-Italic.woff2",
+      "blobSha": "4c24ce2815261b7ccd4c58f402ae5c9de860dddc",
+      "sha256": "708b7baa59a80d80465229b74f1dcb599d3ee76515a93d304337b92efb964afe"
+    },
+    {
+      "upstream": "client/public/fonts/Inter-Regular.woff2",
+      "local": "upstream/client/public/fonts/Inter-Regular.woff2",
+      "runtime": "client/vendor/librechat/fonts/Inter-Regular.woff2",
+      "blobSha": "b8699af29b021cbbbdf82e18f5c4a2271d19b616",
+      "sha256": "b6f9db9e45be20f3c1312c97fbee7ec36b7d8280f8caa4d53c9ba0408cc9997a"
+    },
+    {
+      "upstream": "client/public/fonts/Inter-SemiBold.woff2",
+      "local": "upstream/client/public/fonts/Inter-SemiBold.woff2",
+      "runtime": "client/vendor/librechat/fonts/Inter-SemiBold.woff2",
+      "blobSha": "95c48b184ea96eeeba1eb03904abf1c587f848b6",
+      "sha256": "8e52a861dc26ff4608c50bd7ff89b65d0d6216a2afe7b47ce5d84544811ca400"
+    },
+    {
+      "upstream": "client/public/fonts/Inter-SemiBoldItalic.woff2",
+      "local": "upstream/client/public/fonts/Inter-SemiBoldItalic.woff2",
+      "runtime": "client/vendor/librechat/fonts/Inter-SemiBoldItalic.woff2",
+      "blobSha": "ddfe19e839c05f579914dae39743c7e726fea1f7",
+      "sha256": "8789e3e4f2cb727ad4cecbcf8cd289011e56cad1b65690828c67deb76534807b"
+    },
+    {
+      "upstream": "client/public/fonts/roboto-mono-latin-400-italic.woff2",
+      "local": "upstream/client/public/fonts/roboto-mono-latin-400-italic.woff2",
+      "runtime": "client/vendor/librechat/fonts/roboto-mono-latin-400-italic.woff2",
+      "blobSha": "75d29cff8e3751199dc3adff94f9048040a1d714",
+      "sha256": "dc25cbf4baaf778bd8ae78fbc0e7947942810f3390a530ba13d3d5ac3be9dbdc"
+    },
+    {
+      "upstream": "client/public/fonts/roboto-mono-latin-400-normal.woff2",
+      "local": "upstream/client/public/fonts/roboto-mono-latin-400-normal.woff2",
+      "runtime": "client/vendor/librechat/fonts/roboto-mono-latin-400-normal.woff2",
+      "blobSha": "53d081f3a538a63578c15a5cc11219b32e6d5795",
+      "sha256": "32c8a74ac0816253d69a7cc68a60986d91c77c80fb17101058527bffa45a13ba"
+    },
+    {
+      "upstream": "client/public/fonts/roboto-mono-latin-700-normal.woff2",
+      "local": "upstream/client/public/fonts/roboto-mono-latin-700-normal.woff2",
+      "runtime": "client/vendor/librechat/fonts/roboto-mono-latin-700-normal.woff2",
+      "blobSha": "92fe38dd414bb9ad9092af52f25b9c5e1da86d71",
+      "sha256": "6f8d857c5a8545e67de6b60aa0fe5c33874e0cfd8d94e61a3101c575d488e401"
+    },
+    {
+      "upstream": "client/src/components/Chat/ChatView.tsx",
+      "local": "upstream/client/src/components/Chat/ChatView.tsx",
+      "blobSha": "9c760e44001d4eeb5cae3640cc6aeb5129e95c61",
+      "sha256": "3fced2f343828cfca0f46ca7f5dfa79b7f2ca89b6fa33a78c3b2b7d7941d14f7"
+    },
+    {
+      "upstream": "client/src/components/Chat/Presentation.tsx",
+      "local": "upstream/client/src/components/Chat/Presentation.tsx",
+      "blobSha": "30a61842c8c2cac0c67dfed34319f0531c70040b",
+      "sha256": "cd8d38db05a48aadf6282ce3556d13fb1f9c259f163661a8ca6a22e8a82b9a48"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "repository": "https://github.com/LibreChat-AI/LibreChat",
+  "channel": "registry.librechat.ai/librechat-ai/librechat-dev:latest",
+  "branch": "main",
+  "commit": "f4154b649efa37e1345ccc517a4d8d1ed2178c82",
+  "version": "v0.8.9-rc1",
+  "selectedAt": "2026-11-04",
+  "sourceDirectory": "upstream/LibreChat",
+  "runtimeFrontend": "upstream/LibreChat/client",
+  "runtimeBackend": "server",
+  "license": "MIT",
+  "licenseSha256": "958f543bed829e0ca42c35ef86f9eb06f46b8e8ceee28c10b23bcc928e9c03d3",
+  "browserWorkspaces": [
+    "client",
+    "packages/data-provider",
+    "packages/client",
+    "packages/chat"
+  ],
+  "securityOverrides": {
+    "follow-redirects": "1.16.2"
+  },
+  "workflowEvidence": [
+    "upstream/LibreChat/.github/workflows/dev-images.yml",
+    "upstream/LibreChat/.github/workflows/dev-branch-images.yml"
+  ],
+  "originalLockSha256": "5f5cf7fa0232d57867d33ffb894b649f3f8cceae61a2040c02425d2fdd7af7bc",
+  "effectiveLockSha256": "7bed0656e119edd3720a53f9b73c1215f6a2f4a2b3684ea881c825a324d53230",
+  "lockChecksumNormalization": "UTF-8/LF"
+}

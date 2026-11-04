@@ -1,0 +1,56 @@
+{
+  "recordedAt": "2026-11-04T06:16:37.608Z",
+  "environment": "local Node/Windows/Chromium; no Docker; no real workflow API",
+  "formats": [
+    {
+      "format": "md",
+      "contentType": "text/markdown; charset=utf-8",
+      "bytes": 40661,
+      "durationMs": 17
+    },
+    {
+      "format": "pdf",
+      "contentType": "application/pdf",
+      "bytes": 151677,
+      "durationMs": 1176
+    },
+    {
+      "format": "png",
+      "contentType": "application/zip",
+      "bytes": 1622225,
+      "durationMs": 1293
+    }
+  ],
+  "guestExportRejected": true,
+  "shareSnapshotReadAndRevoke": true,
+  "inspection": {
+    "pdfPages": 25,
+    "pdfChineseTextExtractable": true,
+    "pdfEndMarkerPresent": true,
+    "pdfTelephoneLinks": 90,
+    "pngParts": [
+      {
+        "name": "对话-001.png",
+        "width": 1100,
+        "height": 16000
+      },
+      {
+        "name": "对话-002.png",
+        "width": 1100,
+        "height": 7777
+      }
+    ],
+    "pngTotalHeight": 23777,
+    "oldVersionExcluded": true
+  },
+  "visualReview": [
+    "PDF first and final pages rendered for inspection",
+    "Chinese glyphs, table columns, phone links and final marker visible",
+    "Final PNG segment crop visually includes final end marker"
+  ],
+  "limits": [
+    "Windows local Chrome verification; Docker Chromium not executed",
+    "90 section fixture; no claim about unlimited size",
+    "Final print palette was re-exported and visually checked on the local Chrome runtime"
+  ]
+}

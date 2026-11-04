@@ -1,0 +1,50 @@
+{
+  "name": "school-agent",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "dev": "concurrently -k \"node --watch --env-file-if-exists=.env scripts/start.js\" \"npm run dev:client\"",
+    "dev:client": "node scripts/librechat.js dev",
+    "install:client": "node scripts/librechat.js install",
+    "build:packages": "node scripts/librechat.js packages",
+    "build:client": "node scripts/librechat.js client",
+    "start": "node --env-file-if-exists=.env scripts/start.js",
+    "build": "node scripts/librechat.js build",
+    "test": "node --test --test-concurrency=1 tests/*.test.js",
+    "test:performance": "node scripts/lighthouse.mjs",
+    "init-admin": "node --env-file-if-exists=.env scripts/init-admin.js",
+    "check": "npm run build && npm test"
+  },
+  "dependencies": {
+    "cookie-parser": "1.4.7",
+    "express": "5.1.0",
+    "helmet": "8.1.0",
+    "marked": "15.0.12",
+    "nodemailer": "10.3.1",
+    "playwright": "1.58.2",
+    "sanitize-html": "2.18.1",
+    "yazl": "3.3.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "concurrently": "9.2.5"
+  },
+  "description": "A self-hosted campus AI agent portal built on the full LibreChat client, with Dify adapters, permissions and persistent conversations.",
+  "license": "MIT",
+  "author": {
+    "name": "ScyPolit",
+    "email": "scypolite@Outlook.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ScyPolit/SchoolAgent.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ScyPolit/SchoolAgent/issues"
+  },
+  "homepage": "https://github.com/ScyPolit/SchoolAgent#readme"
+}

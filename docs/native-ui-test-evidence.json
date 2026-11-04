@@ -1,0 +1,97 @@
+{
+  "checkedAt": "2026-11-04 07:53:53 UTC",
+  "scope": "Local Windows production build, original LibreChat client with campus patches; no Docker deployment or real upstream integration acceptance",
+  "source": {
+    "commit": "f4154b649efa37e1345ccc517a4d8d1ed2178c82",
+    "version": "v0.8.9-rc1",
+    "source": "upstream/LibreChat/client",
+    "localChangesManifestSha256": "bca5ce164b2e8e1422f3bedfb706476b979cebab6e6a21b6f7f6d770d0b0255a",
+    "builtAt": "2026-11-04T07:50:19.658Z"
+  },
+  "browserTool": "agent-browser 0.39.4, named isolated Chrome session",
+  "session": "school-finalqa-13cb7808671b",
+  "manualBrowserClosed": true,
+  "checks": [
+    {
+      "feature": "guest native chat/history/regeneration",
+      "result": "pass",
+      "environment": "explicit development adapter, not real Dify/Polymas"
+    },
+    {
+      "feature": "native sibling selection followed by new question",
+      "result": "pass",
+      "evidence": "artifacts/native-branch-feedback-evidence.json",
+      "verified": "Selected oldest answer remains actual parent in SQLite"
+    },
+    {
+      "feature": "native text feedback",
+      "result": "pass",
+      "verified": "Persisted rating -1 and textLength 22 on intended regenerated answer version"
+    },
+    {
+      "feature": "native guest export login and account migration",
+      "result": "pass",
+      "verified": "Original login, explicit consent, migrated history visible; logout clears account history from guest view"
+    },
+    {
+      "feature": "native share creation and fixed public snapshot",
+      "result": "pass",
+      "verified": "One-day expiry, correct selected branch, valid publication date, unsupported continuation hidden"
+    },
+    {
+      "feature": "native admin homepage editing",
+      "result": "pass",
+      "verified": "Welcome text saved and reopened, then original value restored through UI"
+    },
+    {
+      "feature": "native light/dark themes",
+      "result": "pass",
+      "verified": "Original settings toggle; final admin title RGB33 in light and RGB236 in dark"
+    },
+    {
+      "feature": "phone viewport",
+      "result": "pass",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "documentWidth": 390,
+      "verified": "Native admin and 90-section conversation; 90 tel links, zero javascript links"
+    },
+    {
+      "feature": "native Markdown export click",
+      "result": "pass",
+      "filename": "artifacts/exports/native-download-long.md",
+      "bytes": 40661,
+      "sha256": "41c41b3f8325b145624426ffaed52b6b7649d2c8fa3abe96c53314ceed289944",
+      "verified": "Same hash as independently verified HTTP export"
+    },
+    {
+      "feature": "native clipboard copy",
+      "result": "partial",
+      "verified": "Original copy button clickable; browser clipboard read rejected by permission, content not independently read"
+    }
+  ],
+  "screenshots": [
+    "artifacts/native-marketplace-light.png",
+    "artifacts/native-admin-desktop-final.png",
+    "artifacts/native-admin-mobile-final.png",
+    "artifacts/native-chat-mobile.png",
+    "artifacts/native-share-public-final.png"
+  ],
+  "downloadToolLimitation": {
+    "issue": "agent-browser download command Windows canonicalized path canceled Chrome download",
+    "workaround": "Set only local QA Browser download directory to a plain Windows backslash path via CDP, then click original UI export button; completed event and bytes verified",
+    "productCodeChanged": false,
+    "reference": "https://github.com/vercel-labs/agent-browser/issues/1659"
+  },
+  "exclusions": [
+    "Docker execution",
+    "Real school Dify and Polymas",
+    "School SMTP delivery",
+    "School VPN/HTTPS",
+    "Real WeChat phone browser",
+    "Real upstream 20-user capacity"
+  ],
+  "performance": "Recorded separately in artifacts/performance-campus/summary.json; this manual record does not assert a performance pass"
+}

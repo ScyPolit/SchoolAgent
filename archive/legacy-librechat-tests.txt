@@ -1,0 +1,40 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { handleComposerKey } from '../client/vendor/librechat/useTextarea.js';
+
+test('Chinese IME composition never submits a partial question', () => {
+  for (const input of [{key:'Enter',nativeEvent:{isComposing:true}},{key:'Enter',keyCode:229},{key:'Process'},{key:'Enter',composing:true}]) {
+    let submitted = false, prevented = false;
+    handleComposerKey({...input,preventDefault(){prevented=true;}},{composing:input.composing,isSubmitting:false,submit(){submitted=true;}});
+    assert.equal(submitted,false); assert.equal(prevented,false);
+  }
+});
+
+test('composer submits Enter once, preserves Shift+Enter, blocks duplicate inflight input', () => {
+  let submitted=0;
+  const dispatch=(event,isSubmitting=false)=>handleComposerKey({key:'Enter',preventDefault(){},...event},{composing:false,isSubmitting,submit(){submitted++;}});
+  dispatch({}); dispatch({shiftKey:true}); dispatch({},true); dispatch({shiftKey:true,ctrlKey:true});
+  assert.equal(submitted,2);
+});
+
+test('vendored LibreChat source and license retain their pinned checksums', () => {
+  const manifest=JSON.parse(readFileSync(new URL('../third_party/librechat/manifest.json',import.meta.url)));
+  assert.equal(manifest.commit,'b288d81f5a4625403bc880e93059d90d9aa51fe3');
+  for(const source of manifest.files){
+    const bytes=readFileSync(new URL('../third_party/librechat/'+source.local,import.meta.url));
+    assert.equal(createHash('sha256').update(bytes).digest('hex'),source.sha256,source.local);
+    if(source.blobSha) assert.equal(createHash('sha1').update('blob '+bytes.length+'\0').update(bytes).digest('hex'),source.blobSha,source.local+' official Git blob');
+    if(source.runtime) assert.equal(createHash('sha256').update(readFileSync(new URL('../'+source.runtime,import.meta.url))).digest('hex'),source.sha256,source.runtime);
+  }
+});
+
+test('runtime LibreChat theme keeps the exact pinned light/dark palette and locally bundled fonts',()=>{
+  const source=readFileSync(new URL('../third_party/librechat/upstream/client/src/style.css',import.meta.url),'utf8');
+  const runtime=readFileSync(new URL('../client/vendor/librechat/theme.css',import.meta.url),'utf8');
+  const palette=source.slice(source.indexOf('/* Custom Variables */'),source.indexOf('.text-token-text-primary'));
+  assert.ok(runtime.includes(palette),'all upstream palette and light/dark rules are copied without color substitutions');
+  const fonts=source.slice(source.indexOf('@font-face'),source.indexOf('/*\n\nThe default ChatGPT fonts')).replaceAll('$fonts/','./fonts/');
+  assert.ok(runtime.includes(fonts),'font rules only replace the upstream build alias with local asset URLs');
+});

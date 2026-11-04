@@ -1,0 +1,20 @@
+# Development-only override. Never use this file for school production deployment.
+services:
+  app:
+    environment:
+      NODE_ENV: development
+      COOKIE_SECURE: "false"
+      ENABLE_DEMO_ADAPTER: "true"
+      PUBLIC_URL: http://localhost:8080
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_ENCRYPTION: none
+      SMTP_FROM: campus@example.test
+  mailpit:
+    image: axllent/mailpit:v1.27
+    profiles: ["mail"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"
+    networks:
+      - backplane

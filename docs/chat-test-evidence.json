@@ -1,0 +1,23 @@
+{
+  "date": "2026-11-04",
+  "timezone": "Asia/Shanghai",
+  "command": "node --test --test-concurrency=1 tests/adapters.test.js tests/chat.test.js",
+  "tests": { "total": 29, "passed": 29, "failed": 0, "cancelled": 0, "skipped": 0, "durationMs": 1410.8613 },
+  "capacity": {
+    "source": "local-protocol-fixture-only",
+    "distinctGuestIdentities": 20,
+    "concurrent": 20,
+    "succeeded": 20,
+    "elapsedMs": 107.66970000000003,
+    "firstAnswerMs": [59,59,58,65,64,62,61,60,59,58,57,58,58,56,56,55,54,53,51,49],
+    "durationMs": [59,59,59,65,64,62,62,60,59,58,58,58,58,56,56,55,54,53,51,49],
+    "rssBytes": 105254912,
+    "assertions": ["all independent invocation IDs", "all independent upstream user IDs", "all independent local guest IDs", "all expected conversation answers", "all first-answer and completion records persisted"]
+  },
+  "limits": [
+    "HTTP fixture runs locally and does not execute a model or actual campus workflow",
+    "Dify real instance and Polymas official API remain unverified",
+    "Results do not certify school production capacity, business answer accuracy, or deployed proxy streaming",
+    "No Docker deployment was executed"
+  ]
+}

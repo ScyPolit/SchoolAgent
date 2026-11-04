@@ -1,0 +1,65 @@
+{
+  "runnerExitCode": 0,
+  "summary": {
+    "sourceCommit": "f4154b649efa37e1345ccc517a4d8d1ed2178c82",
+    "frontend": "actual upstream production build",
+    "database": "campus SQLite; no upstream Mongo latency injection",
+    "reportDirectory": "artifacts/performance-campus/attempt-2026-11-04T08-00-05-160Z",
+    "memoryBefore": {
+      "totalBytes": 33745596416,
+      "freeBytes": 7605411840
+    },
+    "runs": 3,
+    "validRuns": 3,
+    "runtimeErrors": [],
+    "budgets": {
+      "lcpMs": 4500,
+      "cls": 0.1,
+      "tbtMs": 500
+    },
+    "measured": {
+      "lcpMs": 1919.266,
+      "cls": 0.01359999066047923,
+      "tbtMs": 480.4209999999998
+    },
+    "transcriptIsLcp": [
+      true,
+      true,
+      true
+    ],
+    "passed": true,
+    "completedAt": "2026-11-04T08:01:33.245Z"
+  },
+  "perRun": [
+    {
+      "report": "lhr-1.report.json",
+      "toolsCalls": 1,
+      "status": 200,
+      "apiErrors": 0,
+      "authHeadersRedacted": true,
+      "lcpMs": 2171.422,
+      "cls": 0.01359999066047923,
+      "tbtMs": 563.5969999999998
+    },
+    {
+      "report": "lhr-2.report.json",
+      "toolsCalls": 1,
+      "status": 200,
+      "apiErrors": 0,
+      "authHeadersRedacted": true,
+      "lcpMs": 1692.883,
+      "cls": 0.01359999066047923,
+      "tbtMs": 460.5640000000001
+    },
+    {
+      "report": "lhr-3.report.json",
+      "toolsCalls": 1,
+      "status": 200,
+      "apiErrors": 0,
+      "authHeadersRedacted": true,
+      "lcpMs": 1919.266,
+      "cls": 0.02042023640661939,
+      "tbtMs": 480.4209999999998
+    }
+  ]
+}

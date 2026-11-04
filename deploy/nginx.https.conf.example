@@ -1,0 +1,38 @@
+# Host nginx template. Install the school's certificate and replace the domain,
+# trusted source ranges and proxy port before enabling this server.
+# Include this file in nginx's http context. Token queries and share identifiers
+# are intentionally excluded from the access log; do not enable combined logs.
+map $uri $school_log_uri {
+    default $uri;
+    ~^/api/shares/ /api/shares/redacted;
+    ~^/share/ /share/redacted;
+}
+log_format school_safe '$remote_addr [$time_local] "$request_method $school_log_uri $server_protocol" $status $body_bytes_sent';
+server {
+    listen 443 ssl;
+    server_name campus-agent.school.internal;
+    ssl_certificate /etc/nginx/certs/campus-agent.crt;
+    ssl_certificate_key /etc/nginx/certs/campus-agent.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    access_log /var/log/nginx/school-agent.access.log school_safe;
+    error_log /var/log/nginx/school-agent.error.log crit;
+    # Replace with the REAL school LAN and VPN ranges. Do not expose to Internet.
+    allow 127.0.0.1;
+    # allow 10.20.0.0/16;
+    # allow 172.25.0.0/16;
+    deny all;
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header Connection "";
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_cache off;
+        gzip off;
+        proxy_read_timeout 330s;
+        add_header X-Accel-Buffering no always;
+    }
+}
