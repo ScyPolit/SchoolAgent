@@ -102,7 +102,7 @@ test('tool can explicitly restore active branch history inside its question with
 });
 
 test('tool text mapping supports direct final text, JSON strings and structured text without leaking node or resource data', async () => {
-  for (const text of ['最终公开正文', JSON.stringify('最终公开正文'), JSON.stringify({ text: '最终公开正文', private: 'private output' })]) {
+  for (const [text, expected] of [['最终公开正文', '最终公开正文'], ['88000000', '88000000'], ['false', 'false'], [JSON.stringify('最终公开正文'), '最终公开正文'], [JSON.stringify({ text: '最终公开正文', private: 'private output' }), '最终公开正文']]) {
     const events = [];
     const fetcher = async url => url.includes('/api/token?') ? token() : stream([
       ['ANSWER', { text: 'private reasoning' }],
@@ -110,7 +110,7 @@ test('tool text mapping supports direct final text, JSON strings and structured 
     ]);
     const result = await createPolymasAdapter(integration({ answerField: 'text' }), fetcher).run(input(e => events.push(e)));
     assert.equal(result.status, 'completed');
-    assert.deepEqual(events.filter(e => e.type === 'delta'), [{ type: 'delta', text: '最终公开正文', complete: true }]);
+    assert.deepEqual(events.filter(e => e.type === 'delta'), [{ type: 'delta', text: expected, complete: true }]);
     assert.ok(!JSON.stringify(events).includes('private'));
   }
   for (const text of ['', '  ', undefined, 123, JSON.stringify({ private: 'private output' })]) {

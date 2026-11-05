@@ -181,7 +181,12 @@ export function createPolymasAdapter(integration, fetcher = fetch) {
             }
           } else if (frame.event === 'OUT_COMPLETE') {
             let value = event.text;
-            try { value = JSON.parse(value); }
+            try {
+              const parsed = JSON.parse(value);
+              // A plain phone number or yes/no answer can also be valid JSON.
+              // Keep such scalar text intact when the public text field is selected.
+              value = config.answerField === 'text' && (parsed === null || !['object', 'string'].includes(typeof parsed)) ? value : parsed;
+            }
             catch {
               if (config.answerField !== 'text' || typeof value !== 'string') throw fail('ANSWER_MAPPING', '工具工作流最终 text 不是约定的 JSON 输出；纯文本输出请选择 text 字段。');
             }
