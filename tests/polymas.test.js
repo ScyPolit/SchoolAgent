@@ -87,6 +87,40 @@ test('assistant handles UTF-8 fragmented SSE, final authority, semantic terminal
   }
 });
 
+test('tool can explicitly restore active branch history inside its question without sending unused history variables', () => {
+  const history = [{ role: 'user', content: '当前分支问题' }, { role: 'assistant', content: '当前分支答案' }];
+  const configured = integration({ queryField: 'question', historyMode: 'question', historyField: 'unused_history' });
+  const request = buildPolymasRequest({ ...input(), history, integration: configured });
+  assert.ok(request.body.flowData.question.includes(JSON.stringify(history)));
+  assert.ok(request.body.flowData.question.endsWith('当前问题'));
+  assert.equal('unused_history' in request.body.flowData, false);
+  assert.equal('sessionNid' in request.body, false);
+  assert.equal(buildPolymasRequest({ ...input(), integration: configured }).body.flowData.question, '当前问题');
+  assert.throws(() => buildPolymasRequest({ ...input(), history, integration: integration({ historyMode: 'none', historyField: 'stale' }) }), { code: 'POLYMAS_HISTORY_REQUIRED' });
+  assert.throws(() => buildPolymasRequest({ ...input(), integration: integration({ historyMode: 'field' }) }), { code: 'POLYMAS_HISTORY_INVALID' });
+  assert.throws(() => buildPolymasRequest({ ...input(), integration: integration({ historyMode: 'unknown' }) }), { code: 'POLYMAS_HISTORY_INVALID' });
+});
+
+test('tool text mapping supports direct final text, JSON strings and structured text without leaking node or resource data', async () => {
+  for (const text of ['最终公开正文', JSON.stringify('最终公开正文'), JSON.stringify({ text: '最终公开正文', private: 'private output' })]) {
+    const events = [];
+    const fetcher = async url => url.includes('/api/token?') ? token() : stream([
+      ['ANSWER', { text: 'private reasoning' }],
+      ['OUT_COMPLETE', { text, data: [{ private: 'private resources' }], event: { eventType: 'OUTPUT_OBJ' } }],
+    ]);
+    const result = await createPolymasAdapter(integration({ answerField: 'text' }), fetcher).run(input(e => events.push(e)));
+    assert.equal(result.status, 'completed');
+    assert.deepEqual(events.filter(e => e.type === 'delta'), [{ type: 'delta', text: '最终公开正文', complete: true }]);
+    assert.ok(!JSON.stringify(events).includes('private'));
+  }
+  for (const text of ['', '  ', undefined, 123, JSON.stringify({ private: 'private output' })]) {
+    const fetcher = async url => url.includes('/api/token?') ? token() : stream([['OUT_COMPLETE', { text }]]);
+    await assert.rejects(createPolymasAdapter(integration({ answerField: 'text' }), fetcher).run(input()), { code: 'ANSWER_MAPPING' });
+  }
+  const blocking = async url => url.includes('/api/token?') ? token() : Response.json({ code: 200, data: '最终公开正文' });
+  assert.equal((await createPolymasAdapter(integration({ answerField: 'text', responseMode: 'blocking' }), blocking).run(input())).status, 'completed');
+});
+
 test('tool emits only the configured OUT_COMPLETE answer and never leaks ANSWER/node output', async () => {
   const events = [];
   const fetcher = async url => url.includes('/api/token?') ? token() : stream([

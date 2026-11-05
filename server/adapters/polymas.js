@@ -48,6 +48,9 @@ function field(value) {
 function outputAt(value, path) {
   return String(path || '').split('.').filter(Boolean).reduce((result, key) => result && Object.hasOwn(result, key) ? result[key] : undefined, value);
 }
+function questionWithHistory(content, history) {
+  return history.length ? `以下 JSON 为本次会话已选定的历史消息，仅用于理解上下文：\n${JSON.stringify(history)}\n\n当前用户问题：\n${content}` : content;
+}
 
 export function encryptPolymasPayload(body, paramKey, encoding = 'md5-hex') {
   if (!paramKey) throw fail('POLYMAS_PARAM_KEY_REQUIRED', '此接口需要管理员提供的 paramkey；请在服务端凭据中录入。', 409);
@@ -71,16 +74,18 @@ export function buildPolymasRequest({ integration, content, history, upstreamUse
   if (!appCode) throw fail('POLYMAS_APP_CODE_REQUIRED', '请配置已发布智能体的 appCode（不是网关 appId）。', 409);
   let body, path;
   if (config.mode === 'assistant') {
-    const question = history.length ? `以下 JSON 为本次会话已选定的历史消息，仅用于理解上下文：\n${JSON.stringify(history)}\n\n当前用户问题：\n${content}` : content;
+    const question = questionWithHistory(content, history);
     // Never reuse remote sessionNid/chatNid: local branches are authoritative.
     body = { question, appCode, userNid: upstreamUser, saveHistoryFlag: config.saveHistory !== false };
     path = '/bot/t/v1/completions/chat/stream';
   } else {
     if (!field(config.queryField) || !field(config.answerField)) throw fail('POLYMAS_MAPPING_REQUIRED', '工具工作流需要选择问题变量和主答案输出字段。', 409);
-    if (config.historyField && (!field(config.historyField) || config.historyField === config.queryField)) throw fail('POLYMAS_HISTORY_INVALID', '历史变量须与问题变量不同。', 409);
-    if (history.length && !config.historyField) throw fail('POLYMAS_HISTORY_REQUIRED', '此工具工作流没有配置历史变量，无法可靠追问；请先配置历史输入。', 409);
-    const flowData = { ...(config.inputs || {}), [config.queryField]: content };
-    if (config.historyField) flowData[config.historyField] = JSON.stringify(history);
+    const historyMode = config.historyMode || (config.historyField ? 'field' : 'none');
+    if (!['none', 'field', 'question'].includes(historyMode)) throw fail('POLYMAS_HISTORY_INVALID', '请选择工作流实际支持的历史传递方式。', 409);
+    if (historyMode === 'field' && (!field(config.historyField) || config.historyField === config.queryField)) throw fail('POLYMAS_HISTORY_INVALID', '历史变量须已配置且与问题变量不同。', 409);
+    if (history.length && historyMode === 'none') throw fail('POLYMAS_HISTORY_REQUIRED', '此工具工作流没有配置历史传递方式，无法可靠追问；请先配置历史输入。', 409);
+    const flowData = { ...(config.inputs || {}), [config.queryField]: historyMode === 'question' ? questionWithHistory(content, history) : content };
+    if (historyMode === 'field') flowData[config.historyField] = JSON.stringify(history);
     body = { appCode, userNid: upstreamUser, stream: config.responseMode !== 'blocking', flowData };
     path = '/bot/v2/tool';
   }
@@ -141,6 +146,9 @@ export function createPolymasAdapter(integration, fetcher = fetch) {
         return { status: 'completed', ...meta, answerDeltas, mode: answerDeltas ? 'incremental' : 'complete' };
       };
       const toolAnswer = value => {
+        // Advanced assistant workflows can return the final public text directly.
+        // Only an explicit `text` mapping accepts a scalar; other mappings remain strict.
+        if (config.answerField === 'text' && typeof value === 'string') return finalAnswer(value);
         const result = outputAt(value, config.answerField);
         return finalAnswer(result);
       };
@@ -174,7 +182,9 @@ export function createPolymasAdapter(integration, fetcher = fetch) {
           } else if (frame.event === 'OUT_COMPLETE') {
             let value = event.text;
             try { value = JSON.parse(value); }
-            catch { throw fail('ANSWER_MAPPING', '工具工作流最终 text 不是约定的 JSON 输出，请核对发布版本。'); }
+            catch {
+              if (config.answerField !== 'text' || typeof value !== 'string') throw fail('ANSWER_MAPPING', '工具工作流最终 text 不是约定的 JSON 输出；纯文本输出请选择 text 字段。');
+            }
             return toolAnswer(value);
           }
           // ANSWER and node outputs may contain internal reasoning; never render them.

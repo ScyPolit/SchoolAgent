@@ -100,6 +100,7 @@ export default function IntegrationEditor({
   const polymasMode = config.mode === 'assistant' ? 'assistant' : 'tool';
   const mode = polymas ? polymasMode : difyMode;
   const mapped = mode === 'workflow' || mode === 'tool';
+  const toolHistoryMode = string(config.historyMode, config.historyField ? 'field' : 'none');
   const responseMode = string(config.responseMode, 'streaming');
   const encryption = string(config.encryption, mode === 'assistant' ? 'aes-ecb-zero' : 'plain');
   const update = (key: string, value: unknown) =>
@@ -120,6 +121,8 @@ export default function IntegrationEditor({
         next.answerField = string(config.answerField, 'answer');
         next.historyField = string(config.historyField);
         if (!next.queryField || !next.answerField) throw new Error(t('required'));
+        if (mode === 'tool' && toolHistoryMode === 'field' && !next.historyField)
+          throw new Error(t('required'));
       }
       if (polymas) {
         next.encryption = encryption;
@@ -333,20 +336,51 @@ export default function IntegrationEditor({
                       choices={['query', 'question', 'prompt', 'input']}
                       onChange={(value) => update('queryField', value)}
                     />
-                    <VariableChoice
-                      label={t('historyField')}
-                      value={string(config.historyField)}
-                      choices={['history', 'chat_history', 'conversation_history']}
-                      optional
-                      onChange={(value) => update('historyField', value)}
-                    />
+                    {mode === 'tool' &&
+                      select(
+                        'historyMode',
+                        toolHistoryMode,
+                        [
+                          ['none', 'noHistoryInput'],
+                          ['field', 'separateHistoryInput'],
+                          ['question', 'historyInQuestion'],
+                        ],
+                        (value) =>
+                          setConfig((previous) => ({
+                            ...previous,
+                            historyMode: value,
+                            ...(value === 'field'
+                              ? {
+                                  historyField:
+                                    string(previous.historyField, 'history') || 'history',
+                                }
+                              : {}),
+                          })),
+                      )}
+                    {(mode !== 'tool' || toolHistoryMode === 'field') && (
+                      <VariableChoice
+                        label={t('historyField')}
+                        value={string(config.historyField)}
+                        choices={['history', 'chat_history', 'conversation_history']}
+                        optional={mode !== 'tool'}
+                        onChange={(value) => update('historyField', value)}
+                      />
+                    )}
+                    {mode === 'tool' && toolHistoryMode === 'question' && (
+                      <Alert variant="neutral">{t('historyInQuestionHint')}</Alert>
+                    )}
                     <VariableChoice
                       label={t('answerField')}
                       value={string(config.answerField, 'answer')}
                       choices={['answer', 'result', 'text', 'output', 'content']}
                       onChange={(value) => update('answerField', value)}
                     />
-                    {!config.historyField && <Alert variant="neutral">{t('singleTurnHint')}</Alert>}
+                    {mode === 'tool' && (
+                      <p className="text-text-secondary text-xs">{t('toolTextOutputHint')}</p>
+                    )}
+                    {(mode === 'tool' ? toolHistoryMode === 'none' : !config.historyField) && (
+                      <Alert variant="neutral">{t('singleTurnHint')}</Alert>
+                    )}
                   </>
                 )}
                 {mode === 'assistant' && <Alert variant="neutral">{t('polymasHistoryHint')}</Alert>}

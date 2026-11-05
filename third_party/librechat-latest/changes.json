@@ -100,7 +100,7 @@
     },
     {
       "path": "client/src/components/School/IntegrationEditor.tsx",
-      "sha256": "d46d05b17bc655c68cd828bbcb5bffd658729bc7a12cab899f05afb32255db86"
+      "sha256": "7db1accf0c799e046dc5ebcb73cd4db5050f9e5855f38984dc7e139b6c71d4e4"
     },
     {
       "path": "client/src/components/School/Migration.tsx",
@@ -120,7 +120,7 @@
     },
     {
       "path": "client/src/components/School/__tests__/integration.spec.tsx",
-      "sha256": "895cce48e2493caa9aab297a907104f40bccec77df39ef1a12618ba917e21bb6"
+      "sha256": "9cf0275380162d6212fb6823305e91a29f1915d4ebb3c0b118c8498a9d59a37b"
     },
     {
       "path": "client/src/components/School/api.ts",
@@ -168,7 +168,7 @@
     },
     {
       "path": "client/src/locales/en/translation.json",
-      "sha256": "71c93dc7bec2acad5a0729620b942b2d53e2503c2422053b84ba9ad242b9ab96"
+      "sha256": "0d9e48271fb852c144eb497456be1e489600cba42dfa6c3b9af95ce4141e4f78"
     },
     {
       "path": "client/src/locales/i18n.ts",
@@ -176,7 +176,7 @@
     },
     {
       "path": "client/src/locales/zh-Hans/translation.json",
-      "sha256": "346d93ec2af894fde9032c5131a9fe4d4be6bd0da497a021e1deb5a74010f464"
+      "sha256": "42c87d10b61b66014ae2d7bfc26f218da8f58f4b22907e82e111f31b79584510"
     },
     {
       "path": "client/src/routes/Layouts/Login.tsx",

@@ -174,6 +174,46 @@ test('platform and protocol choices reveal the correct Polymas fields and reset 
   expect(JSON.stringify(jest.mocked(schoolRequest).mock.calls)).not.toContain('old-dify-key');
 });
 
+test('tool history choices support question context and restore a valid separate variable without losing mappings', async () => {
+  setup(
+    <IntegrationEditor
+      item={{
+        id: 'advanced',
+        name: 'Advanced assistant',
+        platform: 'polymas',
+        appId: 'published-bot',
+        config: { mode: 'tool', queryField: 'question', answerField: 'text' },
+      }}
+      onClose={jest.fn()}
+      onSaved={jest.fn()}
+    />,
+  );
+  expect(screen.queryByRole('combobox', { name: key('historyField') })).not.toBeInTheDocument();
+  fireEvent.change(screen.getByRole('combobox', { name: key('historyMode') }), {
+    target: { value: 'field' },
+  });
+  expect(screen.getByRole('combobox', { name: key('historyField') })).toHaveValue('history');
+  fireEvent.change(screen.getByRole('combobox', { name: key('historyMode') }), {
+    target: { value: 'question' },
+  });
+  expect(screen.queryByRole('combobox', { name: key('historyField') })).not.toBeInTheDocument();
+  expect(screen.getByText(key('historyInQuestionHint'))).toBeInTheDocument();
+  fireEvent.submit(document.getElementById('school-integration-editor')!);
+  await waitFor(() => expect(schoolRequest).toHaveBeenCalledTimes(1));
+  expect(schoolRequest).toHaveBeenCalledWith(
+    '/admin/integrations/advanced',
+    'PATCH',
+    expect.objectContaining({
+      config: expect.objectContaining({
+        historyMode: 'question',
+        historyField: 'history',
+        queryField: 'question',
+        answerField: 'text',
+      }),
+    }),
+  );
+});
+
 test('malformed fixed inputs keep the editor open and never submit a request', async () => {
   jest.spyOn(console, 'error').mockImplementation(() => {});
   const onClose = jest.fn();
