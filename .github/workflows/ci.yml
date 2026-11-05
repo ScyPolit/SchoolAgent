@@ -51,3 +51,6 @@ jobs:
       - name: Client typecheck
         working-directory: upstream/LibreChat/client
         run: npx tsc --noEmit
+      - name: School client regression tests
+        working-directory: upstream/LibreChat/client
+        run: npx jest src/components/School/__tests__ --runInBand --watch=false

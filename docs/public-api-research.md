@@ -1,41 +1,16 @@
 # 公开 API 文档检索与协议核对
 
-检索日期：2026-11-04，Asia/Shanghai。依据用户“文档你上网搜”的要求，实际执行互联网搜索、官方文档读取和官方网页公开界面查看；未调用用户的真实智能体、未填写账号、未发送验证码或聊天消息、未提取网页内部接口，未执行 Docker 部署。
+检索日期：2026-11-04；登录后协议核对更新：2026-11-05，Asia/Shanghai。此前按用户要求完成公开检索，本轮在用户自行登录后读取正式文档。未调用真实智能体、未发送验证码或聊天消息，未执行 Docker 部署。
 
-## Polymas：已确认的站点与未找到的协议
+## Polymas：2026-11-05 已通过授权登录读取官方协议
 
-目标平台严格限定为用户提供的 `polymas.com`。官方[AI 能力中心首页](https://polymas.com/)介绍智能体、知识库及高校应用，并提供开放云平台、OPS 开发平台等产品入口；页脚链接智慧树的营业执照及备案页面。这些页面说明目标产品身份，不能用作聊天 API 协议。
+此前公开检索未取得完整请求协议。用户随后提供了官方[智能助手文档](https://platform.polymas.com/instructions?docNid=KIGeJe725k&childIndex=1)，并完成智慧树登录，本轮已在独立后台浏览器读取正文；另核对同站[网关接入文档](https://platform.polymas.com/instructions?docNid=UvtFSkcFIR&childIndex=2)。未将网页登录 Cookie 作为业务 API 凭据。
 
-通过 `agent-browser` 读取实际公开页面后，观察到：
+已确认网关生产域名、带毫秒时间戳的 MD5 令牌签名、Authorization 请求头、AES ECB / ZeroPadding 参数封装，以及助手聊天 SSE、工具 V2 的普通/流式请求和最终输出格式。文档未提供远程停止接口、可枚举学校发布应用的正式 API，或能证实 AES 密钥字节编码与 Authorization 前缀的完整 SDK 测试向量。
 
-| 页面 | 实际观察 | 可得出的结论 |
-| --- | --- | --- |
-| `https://polymas.com/` | AI 能力中心产品介绍；公开界面没有看到正式 API 请求、鉴权、SSE、取消或历史参数说明 | 已确认目标官网，尚无可实现的公开协议 |
-| 官网右上角登录入口 | 跳转 `login.zhihuishu.com`；登录目标回跳至 `cloudapi.polymas.com` 的 OAuth 入口，再回到官网。页面提供手机号/验证码、账号、学号、工号等登录方式 | 官方系统入口有登录门槛；没有登录，也未确认“通过 API 使用”文档在登录后哪一页 |
-| 学校提供的演示页（应用标识不随开源分发） | 当前能加载“AI助手”，显示初始问候、历史记录及提问框；未看到 API 文档入口 | 演示 UI 可达，不等于正式服务端 API 可用或已验证 |
+实现按上述已公布协议工作，差异以明确的高级兼容选项处理，不能把默认解释视为真实互通已经通过。工具中间 ANSWER 不作为正文，OUT_COMPLETE 中的 JSON 再按主答案字段映射；缺少正式终态不能成功。具体配置、加密边界、历史策略及测试范围见 [Polymas 接入指南](polymas-integration.md)。
 
-浏览工具最初遇到 `net::ERR_NO_SUPPORTED_PROXIES`；显式采用当前机器已配置的 HTTP 代理后成功读取上述页面。此前需求文档记录的演示页访问失败属于先前状态，本轮已经补充公开 UI 可达证据。只读取 UI，没有提交业务问题，因此不标记真实回答、多轮或取消验证通过。
-
-实际执行过的查询包括：
-
-- `site:polymas.com API 接口 文档 智能体`
-- `site:polymas.com 开放 API 工作流 调用`
-- `"polymas.com" "通过API"`
-- `"polymas.com" "智能体" "API调用"`
-- `"polymas.com" "API使用"`
-- `"polymas.com" "接口文档"`
-- `"polymas.com" "API Key"`
-- `"polymas.com" "API" "鉴权"`
-- `"polymas.com" "curl"`
-- `"polymas.com" "openapi"`
-- `site:polymas.com/docs API`、`site:polymas.com/help API`
-- `"chat.polymas.com" 文档`、`"chat.polymas.com" "appCode" API`
-- `"Polymas" "API" site:zhihuishu.com`
-- `"大明白" "Polymas" "API"`
-
-搜索中出现同名预测市场、学术出版及课程辅助脚本，均未作为目标平台协议依据。没有找到可核实为该官方智能体平台发布的完整 API 文档。此结论仅表示本次公开检索结果，不代表平台不存在 API，也不能据此断言所有文档均只能登录查看。索引中出现的非公开凭据式 URL 参数未打开、未保存、未复用。
-
-因此继续保持明确的 `POLYMAS_API_UNCONFIRMED` 阻塞状态。不能把演示页 URL、网页内部请求或其他平台的 OpenAI/Dify 接口套用为 Polymas 正式协议。还需由持有授权的应用维护者从“通过 API 使用”入口取得以下非敏感资料：正式文档链接或导出的请求/响应说明、基础地址、鉴权字段、准确应用标识、问题与历史字段、答案输出、流终态、取消接口及终态核验。密钥仅通过服务端后台配置，不进入文档。应用标识曾存在字母 O / 数字 0 的歧义，需要从正式资料核对；学校实际标识不随开源分发。
+学校账号身份、实际应用标识、密钥、浏览器会话和原始页面快照不随开源分发。官方网页示例也不作为本项目默认业务应用或可用凭据。
 
 ## Dify：已找到的官方公开协议
 

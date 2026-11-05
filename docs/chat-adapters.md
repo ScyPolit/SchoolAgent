@@ -1,6 +1,6 @@
 # 聊天适配、上下文与数据生命周期
 
-实现位置：`server/chat.js`、`server/adapters/`。用户已授权继续功能测试；聊天及适配器专项测试已运行 29 项，全部通过，未执行 Docker 部署。Dify 校内应用、Polymas 正式协议和真实 20 路容量仍未验收。公开文档检索及协议修正见 [public-api-research.md](public-api-research.md)。
+实现位置：`server/chat.js`、`server/adapters/`。用户已授权继续功能测试；聊天及适配器专项测试已运行 29 项，全部通过，未执行 Docker 部署。Dify 校内应用、Polymas 学校发布应用和真实 20 路容量仍未验收。Polymas 正式协议已于 2026-11-05 读取并实现，新增测试见 [接入指南](polymas-integration.md)。公开文档检索及协议修正见 [public-api-research.md](public-api-research.md)。
 
 ## 接入边界
 
@@ -67,7 +67,7 @@ Chatflow 可选 `workflowId` 传递已发布版本标识，是否支持受校内
 
 ## Polymas 与真实联调待办
 
-Polymas 当前明确返回 `POLYMAS_API_UNCONFIRMED`，不猜测演示网页协议。需要正式 API 基础地址、鉴权、输入输出字段、多轮/停止说明及应用标识准确值，随后按同一适配器契约实现并联调。公开 `appCode` 中的字母 O 与另提供 ID 中的数字 0 不会自行统一。
+Polymas 已根据官方文档实现网关签名与令牌缓存、AES 参数封装、智能助手与工具 V2、正式 SSE 终态和主答案映射。缺少凭据返回 `POLYMAS_CREDENTIALS_REQUIRED`，不会将 token 获取或配置失败统计为业务派发；业务 POST 不自动重试。选择式后台和真实联调边界见 [Polymas 接入指南](polymas-integration.md)。
 
 `demo` 适配器必须同时满足 `ENABLE_DEMO_ADAPTER=true` 和非生产模式；页面及回答明确标注开发演示。生产环境即使数据库留有演示配置也拒绝调用。
 

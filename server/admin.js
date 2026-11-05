@@ -1,7 +1,7 @@
 import {Router} from 'express';
 import {z} from 'zod';
 import {all,get,run,id,now,parse,setting,setSetting,transaction} from './db.js';
-import {HttpError,PERMISSIONS,requirePermission,hasPermission,publicUser,hashPassword,encrypt,audit,hashToken} from './security.js';
+import {HttpError,PERMISSIONS,requirePermission,hasPermission,publicUser,hashPassword,encrypt,decrypt,audit,hashToken} from './security.js';
 import {sendAccountMail,sendMail} from './mail.js';
 
 export const adminRouter=Router();
@@ -29,8 +29,8 @@ adminRouter.get('/admin/catalog',(req,res)=>{
  if(!req.user||!['admin','superadmin'].includes(req.user.role))throw new HttpError(403,'需要管理员权限','PERMISSION_DENIED');
  const permitted=permissions=>permissions.some(permission=>hasPermission(req.user,permission));
  res.json({
-  groups:permitted(['users','groups','settings'])?all('SELECT id,name FROM groups'):[],
-  agents:permitted(['agents','groups','statistics','logs','conversations'])?all('SELECT id,name,category FROM agents ORDER BY sort_order'):[],
+  groups:permitted(['users','groups','settings','homepage'])?all('SELECT id,name FROM groups'):[],
+  agents:permitted(['agents','groups','statistics','logs','conversations','homepage'])?all('SELECT id,name,category FROM agents ORDER BY sort_order'):[],
   integrations:permitted(['agents','integrations'])?all('SELECT id,name,platform FROM integrations'):[],
  });
 });
@@ -92,23 +92,34 @@ adminRouter.put('/admin/groups/:id/members',requirePermission('groups'),(req,res
 
 function integrationView(row){return {id:row.id,name:row.name,platform:row.platform,baseUrl:row.base_url,base_url:row.base_url,appId:row.app_id,app_id:row.app_id,hasSecret:Boolean(row.secret),config:parse(row.config),capabilities:parse(row.capabilities),created_at:row.created_at};}
 function integrationInput(input){
- const body=z.object({name:str.optional(),platform:z.enum(['dify','dify-chatflow','dify-workflow','polymas','demo']).optional(),baseUrl:z.string().max(2000).optional(),appId:z.string().max(200).optional(),apiKey:z.string().max(16000).optional(),clearSecret:bool.optional(),config:z.record(z.string(),z.unknown()).optional()}).parse({...input,baseUrl:input.baseUrl??input.base_url,appId:input.appId??input.app_id,apiKey:input.apiKey??input.secret});
+ const body=z.object({name:str.optional(),platform:z.enum(['dify','dify-chatflow','dify-workflow','polymas','demo']).optional(),baseUrl:z.string().max(2000).optional(),appId:z.string().max(200).optional(),apiKey:z.string().max(16000).optional(),credentials:z.object({gatewayAppId:z.string().trim().max(200).optional(),appKey:z.string().max(16000).optional(),paramKey:z.string().max(16000).optional()}).optional(),clearSecret:bool.optional(),config:z.record(z.string(),z.unknown()).optional()}).parse({...input,baseUrl:input.baseUrl??input.base_url,appId:input.appId??input.app_id,apiKey:input.apiKey??input.secret});
  if(body.baseUrl){let url;try{url=new URL(body.baseUrl);}catch{throw new HttpError(400,'API 地址格式不正确');}if(!['http:','https:'].includes(url.protocol)||url.username||url.password||url.hash||url.search)throw new HttpError(400,'API 基础地址仅支持不含凭据、查询串及片段的 HTTP(S) URL');}
  if(body.platform==='demo'&&!(process.env.ENABLE_DEMO_ADAPTER==='true'&&process.env.NODE_ENV!=='production'))throw new HttpError(400,'生产环境禁止开发测试适配器');
+ const checkConfig=(value)=>{if(!value||typeof value!=='object')return;for(const [key,child]of Object.entries(value)){if(/^(?:api[-_]?key|app[-_]?key|param[-_]?key|authorization|access[-_]?token|password|secret)$/i.test(key))throw new HttpError(400,'密钥只能录入加密凭据字段，不能保存到公开配置中','CREDENTIAL_IN_CONFIG');checkConfig(child);}};
+ checkConfig(body.config);
  // Capabilities are measured by integration tests, never accepted as self-certified input.
  return body;
 }
+function integrationSecret(body,previous){
+ if(body.clearSecret)return '';
+ const platform=body.platform||previous?.platform;
+ if(body.credentials&&platform!=='polymas')throw new HttpError(400,'Polymas 网关凭据只能用于 Polymas 接入','CREDENTIAL_PLATFORM');
+ if(body.apiKey&&platform==='polymas')throw new HttpError(400,'请分别录入 Polymas 网关 appId、appKey 和 paramkey','CREDENTIAL_PLATFORM');
+ const existing=previous&&(!body.platform||body.platform===previous.platform)?previous.secret:'';
+ if(body.credentials){const value=parse(decrypt(existing||''),{});const merged={...(value&&typeof value==='object'?value:{})};for(const [key,value]of Object.entries(body.credentials))if(value)merged[key]=value;return Object.keys(merged).length?encrypt(JSON.stringify(merged)):'';}
+ return body.apiKey?encrypt(body.apiKey):existing||'';
+}
 adminRouter.get('/admin/integrations',requirePermission('integrations'),(req,res)=>res.json(all('SELECT * FROM integrations ORDER BY created_at').map(integrationView)));
 adminRouter.post('/admin/integrations',requirePermission('integrations'),requirePermission('credentials'),(req,res)=>{
- const body=integrationInput(req.body);if(!body.name||!body.platform)throw new HttpError(400,'需要名称和平台类型');const integrationId=id('int_');run('INSERT INTO integrations(id,name,platform,base_url,app_id,secret,config,created_at) VALUES(?,?,?,?,?,?,?,?)',integrationId,body.name,body.platform,body.baseUrl||'',body.appId||'',encrypt(body.apiKey||''),JSON.stringify(body.config||{}),now());audit(req,'admin.integration_created',integrationId,{fields:Object.keys(body).filter(k=>k!=='apiKey')});res.status(201).json(integrationView(mustExist('integrations',integrationId)));
+ const body=integrationInput(req.body);if(!body.name||!body.platform)throw new HttpError(400,'需要名称和平台类型');const encrypted=integrationSecret(body);const integrationId=id('int_');run('INSERT INTO integrations(id,name,platform,base_url,app_id,secret,config,created_at) VALUES(?,?,?,?,?,?,?,?)',integrationId,body.name,body.platform,body.baseUrl||'',body.appId||'',encrypted,JSON.stringify(body.config||{}),now());audit(req,'admin.integration_created',integrationId,{fields:Object.keys(body).filter(k=>!['apiKey','credentials'].includes(k))});res.status(201).json(integrationView(mustExist('integrations',integrationId)));
 });
 adminRouter.patch('/admin/integrations/:id',requirePermission('integrations'),requirePermission('credentials'),(req,res)=>{
- mustExist('integrations',req.params.id);const body=integrationInput(req.body);
+ const previous=mustExist('integrations',req.params.id);const body=integrationInput(req.body);const encrypted=integrationSecret(body,previous);
  transaction(()=>{
   for(const [field,column]of [['name','name'],['platform','platform'],['baseUrl','base_url'],['appId','app_id'],['config','config']])if(body[field]!==undefined)run(`UPDATE integrations SET ${column}=? WHERE id=?`,field==='config'?JSON.stringify(body[field]):body[field],req.params.id);
-  if(body.apiKey||body.clearSecret)run('UPDATE integrations SET secret=? WHERE id=?',body.clearSecret?'':encrypt(body.apiKey),req.params.id);
+  if(encrypted!==previous.secret)run('UPDATE integrations SET secret=? WHERE id=?',encrypted,req.params.id);
   if(Object.keys(body).some(key=>key!=='name'))run("UPDATE integrations SET capabilities='{}' WHERE id=?",req.params.id);
- });audit(req,'admin.integration_updated',req.params.id,{fields:Object.keys(body).filter(k=>k!=='apiKey')});res.json(integrationView(mustExist('integrations',req.params.id)));
+ });audit(req,'admin.integration_updated',req.params.id,{fields:Object.keys(body).filter(k=>!['apiKey','credentials'].includes(k))});res.json(integrationView(mustExist('integrations',req.params.id)));
 });
 
 function agentView(row){return {...row,questions:parse(row.questions,[]),recommended:Boolean(row.recommended),published:Boolean(row.published),homepageVisible:Boolean(row.homepage_visible),sortOrder:row.sort_order,integrationId:row.integration_id};}

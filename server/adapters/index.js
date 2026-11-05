@@ -1,11 +1,12 @@
 import { AdapterError, createDifyAdapter } from './dify.js';
+import { createPolymasAdapter } from './polymas.js';
 
 export function createAdapter(integration, fetcher) {
   if (['dify', 'dify-chatflow', 'dify-workflow'].includes(integration.platform)) {
     integration = { ...integration, config: { ...(integration.platform === 'dify-chatflow' ? { mode: 'chatflow' } : integration.platform === 'dify-workflow' ? { mode: 'workflow' } : {}), ...integration.config } };
     return createDifyAdapter(integration, fetcher);
   }
-  if (integration.platform === 'polymas') throw new AdapterError('POLYMAS_API_UNCONFIRMED', 'Polymas 正式 API 地址、鉴权、输入输出、多轮和取消协议尚未取得；当前禁止猜测或调用演示网页。请提供正式 API 文档后完成联调。', 409);
+  if (integration.platform === 'polymas') return createPolymasAdapter(integration, fetcher);
   if (integration.platform !== 'demo') throw new AdapterError('PLATFORM_UNSUPPORTED', '此平台尚未实现正式适配器。', 409);
   if (process.env.ENABLE_DEMO_ADAPTER !== 'true' || process.env.NODE_ENV === 'production') throw new AdapterError('DEMO_DISABLED', '演示适配器仅允许在明确启用的非生产环境使用。', 409);
   return {

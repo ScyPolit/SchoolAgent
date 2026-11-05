@@ -263,7 +263,7 @@ test('configuration rejection stays an attempt; development demonstration is sep
   run('INSERT INTO agents(id,name,published,integration_id,created_at) VALUES(?,?,?,?,?)', 'test-blocked-agent', '未配置智能体', 1, 'test-polymas-blocked', now());
   const blocked = await json('/conversations', { method: 'POST', body: { agentId: 'test-blocked-agent' } });
   const rejected = await message(blocked.id, '不能假报执行');
-  assert.equal(rejected.find(event => event.type === 'error').code, 'POLYMAS_API_UNCONFIRMED');
+  assert.equal(rejected.find(event => event.type === 'error').code, 'POLYMAS_CREDENTIALS_REQUIRED');
   const rejectedLog = get('SELECT * FROM usage_logs WHERE conversation_id=?', blocked.id);
   assert.equal(rejectedLog.execution_requested, 0); assert.equal(rejectedLog.dispatched_at, null);
   const rejectedStats = await json('/admin/statistics?agentId=test-blocked-agent', { user: 'admin' });

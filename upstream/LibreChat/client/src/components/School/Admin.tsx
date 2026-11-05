@@ -18,6 +18,8 @@ import type { SchoolRow, SchoolUser } from './api';
 import type { TranslationKeys } from '~/hooks';
 import { schoolRequest, schoolKeys, schoolDownload, canSchool, useSchoolBootstrap } from './api';
 import MarkdownLite from '~/components/Chat/Messages/Content/MarkdownLite';
+import IntegrationEditor, { IntegrationTest } from './IntegrationEditor';
+import ContentEditor, { DurationChoice } from './ContentEditor';
 import OpenSidebar from '~/components/Chat/Menus/OpenSidebar';
 import Section from '~/components/Nav/Settings/Section';
 import { useLocalize } from '~/hooks';
@@ -39,10 +41,14 @@ type Field = {
     | 'textarea'
     | 'json'
     | 'lines'
+    | 'content'
+    | 'modules'
+    | 'duration'
     | 'checks'
     | 'select'
     | 'boolean';
   options?: { value: string; label: string }[];
+  agentOptions?: { value: string; label: string }[];
   required?: boolean;
   initial?: unknown;
   hint?: string;
@@ -127,7 +133,46 @@ function FieldControl({
   const t = useText();
   const label = t(field.key);
   let control: ReactNode;
-  if (field.kind === 'boolean') {
+  if (field.kind === 'content') {
+    control = (
+      <ContentEditor
+        kind={field.key}
+        value={value}
+        onChange={onChange}
+        groups={field.options}
+        agents={field.agentOptions}
+      />
+    );
+  } else if (field.kind === 'modules') {
+    control = (
+      <div className="grid gap-3 sm:grid-cols-2">
+        {[
+          'announcements',
+          'banners',
+          'recommended',
+          'categories',
+          'cards',
+          'questions',
+          'faq',
+          'help',
+          'contact',
+          'footer',
+        ].map((key) => (
+          <div key={key} className="flex items-center gap-2">
+            <Checkbox
+              id={'school-module-' + key}
+              aria-label={t(key)}
+              checked={object(value)[key] !== false}
+              onCheckedChange={(checked) => onChange({ ...object(value), [key]: checked === true })}
+            />
+            <Label htmlFor={'school-module-' + key}>{t(key)}</Label>
+          </div>
+        ))}
+      </div>
+    );
+  } else if (field.kind === 'duration') {
+    control = <DurationChoice label={label} value={Number(value)} onChange={onChange} />;
+  } else if (field.kind === 'boolean') {
     control = (
       <Checkbox
         aria-label={label}
@@ -231,7 +276,7 @@ function Editor({
         if (f.kind === 'boolean') fallback = false;
         if (f.kind === 'checks') fallback = [];
         let v = values(item || {}, f.key) ?? f.initial ?? fallback;
-        if (['checks', 'lines', 'json'].includes(f.kind || ''))
+        if (['checks', 'lines', 'json', 'content', 'modules'].includes(f.kind || ''))
           v = decode(v, f.kind === 'json' ? {} : []);
         if (f.kind === 'json') v = JSON.stringify(v, null, 2);
         if (f.kind === 'lines') v = list(v).join('\n');
@@ -420,36 +465,6 @@ function schemas(
         { key: 'homepageVisible', kind: 'boolean', initial: true },
         { key: 'published', kind: 'boolean' },
       ];
-    case 'integrations':
-      return [
-        { key: 'name', required: true },
-        {
-          key: 'platform',
-          kind: 'select',
-          initial: 'dify',
-          options: ['dify', 'dify-chatflow', 'dify-workflow', 'polymas', 'demo'].map((value) => ({
-            value,
-            label: value,
-          })),
-        },
-        { key: 'baseUrl' },
-        { key: 'appId' },
-        { key: 'apiKey', kind: 'password', hint: t('secretHint'), maxLength: 16000 },
-        { key: 'clearSecret', kind: 'boolean' },
-        {
-          key: 'config',
-          kind: 'json',
-          initial: {
-            mode: 'chatflow',
-            queryField: 'query',
-            historyField: 'history',
-            answerField: 'answer',
-            inputs: {},
-            responseMode: 'streaming',
-          },
-          hint: t('mappingHint'),
-        },
-      ];
     default:
       return [];
   }
@@ -628,6 +643,7 @@ function Resource({ page, user, catalog }: { page: string; user: SchoolUser; cat
     [applied, setApplied] = useState<Record<string, string>>({}),
     [editor, setEditor] = useState<SchoolRow | null | false>(false),
     [members, setMembers] = useState<SchoolRow | null>(null),
+    [testing, setTesting] = useState<SchoolRow | null>(null),
     [importing, setImporting] = useState(false),
     [detail, setDetail] = useState<SchoolRow | null>(null),
     [error, setError] = useState(''),
@@ -791,15 +807,7 @@ function Resource({ page, user, catalog }: { page: string; user: SchoolUser; cat
               </Button>
             )}
             {page === 'integrations' && canCredentials && (
-              <Button
-                variant="outline"
-                disabled={action.isLoading}
-                onClick={() =>
-                  act(`/admin/integrations/${r.id}/test`).then((result) => {
-                    if (result) setDetail({ id: r.id, ...object(result) });
-                  })
-                }
-              >
+              <Button variant="outline" disabled={action.isLoading} onClick={() => setTesting(r)}>
                 {t('test')}
               </Button>
             )}
@@ -1049,7 +1057,14 @@ function Resource({ page, user, catalog }: { page: string; user: SchoolUser; cat
           }
         />
       )}
-      {editor !== false && (
+      {editor !== false && page === 'integrations' && (
+        <IntegrationEditor
+          item={editor || undefined}
+          onClose={() => setEditor(false)}
+          onSaved={refresh}
+        />
+      )}
+      {editor !== false && page !== 'integrations' && (
         <Editor
           title={t(editor ? 'edit' : 'create')}
           fields={
@@ -1075,6 +1090,9 @@ function Resource({ page, user, catalog }: { page: string; user: SchoolUser; cat
         />
       )}
       {members && <Members group={members} onClose={() => setMembers(null)} onSaved={refresh} />}
+      {testing && (
+        <IntegrationTest item={testing} onClose={() => setTesting(null)} onTested={refresh} />
+      )}
       {importing && <ImportUsers onClose={() => setImporting(false)} onSaved={refresh} />}
       {detail && (
         <OGDialog open onOpenChange={() => setDetail(null)}>
@@ -1184,9 +1202,16 @@ function SettingsPage({
         { key: 'themeColor', disabled: true, hint: t('nativeThemeHint') },
         { key: 'welcome' },
         { key: 'subtitle' },
-        ...['announcements', 'banners', 'questions', 'faq', 'modules'].map(
-          (key) => ({ key, kind: 'json' }) as Field,
+        ...['announcements', 'banners', 'questions', 'faq'].map(
+          (key) =>
+            ({
+              key,
+              kind: 'content',
+              options: groups,
+              agentOptions: catalog.agents.map((agent) => ({ value: agent.id, label: agent.name })),
+            }) as Field,
         ),
+        { key: 'modules', kind: 'modules' },
         { key: 'help', kind: 'textarea' },
         { key: 'contact', kind: 'textarea' },
         { key: 'footer', kind: 'textarea' },
@@ -1198,7 +1223,11 @@ function SettingsPage({
         {
           key: 'encryption',
           kind: 'select',
-          options: ['starttls', 'tls', 'none'].map((value) => ({ value, label: value })),
+          options: [
+            ['starttls', 'smtpStarttls'],
+            ['tls', 'smtpTls'],
+            ['none', 'smtpNone'],
+          ].map(([value, label]) => ({ value, label: t(label) })),
         },
         { key: 'from' },
         { key: 'username' },
@@ -1207,7 +1236,7 @@ function SettingsPage({
       ];
     if (key === 'retention')
       return ['guestBrowserDays', 'guestServerDays', 'usageDays', 'auditDays', 'shareDays']
-        .map((key) => ({ key, kind: 'number' }) as Field)
+        .map((key) => ({ key, kind: 'duration' }) as Field)
         .concat([{ key: 'confirmShortening', kind: 'boolean', hint: t('retentionHint') }]);
     return [
       { key: 'guestGroupId', kind: 'select', options: groups },

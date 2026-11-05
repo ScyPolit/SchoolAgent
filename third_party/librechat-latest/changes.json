@@ -84,15 +84,23 @@
     },
     {
       "path": "client/src/components/School/Admin.tsx",
-      "sha256": "9c2502b43ca93ebe2c899117cabeeb317e7911237cdf7a7883f1764565d02c7b"
+      "sha256": "c9a5002bc873cc416fc4d3f99306309df8d7e4898846be7bfa899ac8de9b1482"
     },
     {
       "path": "client/src/components/School/Answer.tsx",
       "sha256": "c6d418d08a472f68e38dfb02f6f099b3e78df566a936289d010e451f84af5ad8"
     },
     {
+      "path": "client/src/components/School/ContentEditor.tsx",
+      "sha256": "9bdc45f6b3ca889bf0894b707c27075eef19cf9c2dba93d56456c5f1afa9d172"
+    },
+    {
       "path": "client/src/components/School/Home.tsx",
       "sha256": "a2dd63b7bf1560a92b61831564bdd818f5c65b914cdc91c5897da22793d846a1"
+    },
+    {
+      "path": "client/src/components/School/IntegrationEditor.tsx",
+      "sha256": "d46d05b17bc655c68cd828bbcb5bffd658729bc7a12cab899f05afb32255db86"
     },
     {
       "path": "client/src/components/School/Migration.tsx",
@@ -103,8 +111,16 @@
       "sha256": "a92dc7de8939ca5572c7f407cce852287429619367ba16390af5dc03a3609b5e"
     },
     {
+      "path": "client/src/components/School/__tests__/content.spec.tsx",
+      "sha256": "935c6ec90ca6647df8416ee149cdf8a5c51789db580aeb797cebfae7a7f6fb50"
+    },
+    {
       "path": "client/src/components/School/__tests__/download.test.ts",
       "sha256": "961f99af7646a76be279c2aae6eee73663065ace881cceb5f1d08bd2d42af307"
+    },
+    {
+      "path": "client/src/components/School/__tests__/integration.spec.tsx",
+      "sha256": "895cce48e2493caa9aab297a907104f40bccec77df39ef1a12618ba917e21bb6"
     },
     {
       "path": "client/src/components/School/api.ts",
@@ -152,7 +168,7 @@
     },
     {
       "path": "client/src/locales/en/translation.json",
-      "sha256": "77f0f3ab55c62e022c3e264507bae70095bb3eb67a835538e1051aa36b5f1950"
+      "sha256": "71c93dc7bec2acad5a0729620b942b2d53e2503c2422053b84ba9ad242b9ab96"
     },
     {
       "path": "client/src/locales/i18n.ts",
@@ -160,7 +176,7 @@
     },
     {
       "path": "client/src/locales/zh-Hans/translation.json",
-      "sha256": "465ff0e507bb48c46f64527d575547d219f5c2f2f8fae3d8f726fbfdf43a19ca"
+      "sha256": "346d93ec2af894fde9032c5131a9fe4d4be6bd0da497a021e1deb5a74010f464"
     },
     {
       "path": "client/src/routes/Layouts/Login.tsx",

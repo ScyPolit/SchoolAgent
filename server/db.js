@@ -43,7 +43,7 @@ export function initCoreSchema(){
  for(const [key,value] of Object.entries(initial)) if(!get('SELECT key FROM settings WHERE key=?',key)) setSetting(key,value);
  run("INSERT OR IGNORE INTO groups(id,name,agent_ids,content_keys) VALUES('guest','游客默认组','[]','[\"*\"]')");
  run("INSERT OR IGNORE INTO groups(id,name,agent_ids,content_keys) VALUES('member','注册用户默认组','[]','[\"*\"]')");
- for(const [integrationId,name,platform] of [['polymas','Polymas · 待正式资料','polymas'],['dify','校内 Dify · 待配置','dify-chatflow']]){
+ for(const [integrationId,name,platform] of [['polymas','Polymas · 待配置','polymas'],['dify','校内 Dify · 待配置','dify-chatflow']]){
   run('INSERT OR IGNORE INTO integrations(id,name,platform,created_at) VALUES(?,?,?,?)',integrationId,name,platform,now());
  }
  run('INSERT OR IGNORE INTO agents(id,name,description,category,avatar,integration_id,created_at) VALUES(?,?,?,?,?,?,?)','directory','电话本 / 政务服务智能体','电话查询与办事指南；待配置正式 Polymas API 后上架。','校园服务','☎️','polymas',now());

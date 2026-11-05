@@ -35,4 +35,4 @@ POST /api/guest/migrate {consent:boolean}，身份取 req.guestId；GET /api/con
 
 管理：GET /api/admin/usage?from=&to=&agentId=&userType=；GET /api/admin/statistics 同筛选；GET /api/admin/conversations?userType=&agentId=&q=&from=&to=（不含正文，按 conversations 权限）；GET /api/admin/conversations/:id（content_view）；GET /api/admin/conversations/:id/export?format=（content_view+content_export）；POST /api/admin/conversations/purge {ids,confirm:true}（cleanup）；GET /api/admin/feedback?status=；PATCH /api/admin/feedback/:id {status,notes}；正文权限不足时反馈不返回正文。
 
-开发适配器仅 ENABLE_DEMO_ADAPTER=true 且 NODE_ENV!=production；醒目标记。Dify Chatflow 使用 fresh会话+完整活动历史重放策略防止分支污染，Workflow必须有history字段才能多轮，Polymas正式API待资料，禁猜协议。测试连接独立计次且能力分项未知/实测。
+开发适配器仅 ENABLE_DEMO_ADAPTER=true 且 NODE_ENV!=production；醒目标记。Dify Chatflow 使用 fresh会话+完整活动历史重放策略防止分支污染，Workflow必须有history字段才能多轮，Polymas按官方文档实现助手/工具V2与网关凭据，实际应用待联调，远程停止降级local_only。测试连接独立计次且能力分项未知/实测。

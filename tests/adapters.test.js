@@ -159,8 +159,8 @@ test('upstream HTTP errors never expose credential-bearing bodies', async () => 
   await assert.rejects(adapter.run(input()), error => error.code === 'UPSTREAM_HTTP_401' && !error.message.includes('secret-sensitive'));
 });
 
-test('Polymas is explicitly blocked and demo is forbidden in production', () => {
-  assert.throws(() => createAdapter({ platform: 'polymas' }), { code: 'POLYMAS_API_UNCONFIRMED' });
+test('Polymas requires gateway credentials and demo is forbidden in production', () => {
+  assert.throws(() => createAdapter({ platform: 'polymas' }), { code: 'POLYMAS_CREDENTIALS_REQUIRED' });
   const original = { node: process.env.NODE_ENV, demo: process.env.ENABLE_DEMO_ADAPTER };
   try {
     process.env.NODE_ENV = 'production'; process.env.ENABLE_DEMO_ADAPTER = 'true';

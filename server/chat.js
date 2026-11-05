@@ -204,7 +204,7 @@ async function invoke(req, res, conversation, message, kind) {
     ctx.remoteTerminal = outcome.status;
     if (!ctx.stopRequested) {
       finish(ctx, outcome.status, outcome.status === 'stopped' ? { cancellationState: 'confirmed', message: '上游报告任务已停止。' } : {});
-      const capabilities = { ...integration.capabilities, connection: { state: outcome.mode === 'demo' ? 'development_demo' : 'observed', at: now() }, output: { state: outcome.mode, at: now(), answerDeltas: outcome.answerDeltas }, multiTurn: { state: 'unverified', strategy: integration.config.mode === 'workflow' ? 'explicit-history-input' : 'fresh-conversation-active-history', at: now() }, cancellation: integration.capabilities.cancellation || { state: 'unverified' } };
+      const capabilities = { ...integration.capabilities, connection: { state: outcome.mode === 'demo' ? 'development_demo' : 'observed', at: now() }, output: { state: outcome.mode, at: now(), answerDeltas: outcome.answerDeltas }, multiTurn: { state: 'unverified', strategy: ['workflow','tool'].includes(integration.config.mode) ? (integration.config.historyField?'explicit-history-input':'single-turn-only') : 'fresh-conversation-active-history', at: now() }, cancellation: integration.platform==='polymas'?{state:'local_only'}:integration.capabilities.cancellation || { state: 'unverified' } };
       run('UPDATE integrations SET capabilities=? WHERE id=?', JSON.stringify(capabilities), integration.id);
     }
   } catch (error) {
@@ -422,7 +422,7 @@ chatRouter.post('/admin/integrations/:id/test', requirePermission('integrations'
       if (event.type === 'meta') { meta = { ...meta, ...event }; run('UPDATE usage_logs SET upstream_task_id=?,upstream_run_id=?,upstream_conversation_id=?,upstream_message_id=? WHERE id=?', meta.taskId || null, meta.runId || null, meta.conversationId || null, meta.messageId || null, invocationId); }
       if (event.type === 'delta') { deltaCount++; if (!answerSeen && event.text) { answerSeen = true; run('UPDATE usage_logs SET first_answer_ms=? WHERE id=?', now() - stamp, invocationId); } }
     } });
-    const capabilities = { connection: { state: result.mode === 'demo' ? 'development_demo' : result.status === 'completed' ? 'observed' : 'failed', at: now() }, output: { state: result.mode, answerDeltas: result.answerDeltas || 0, at: now() }, multiTurn: { state: 'unverified' }, cancellation: { state: 'unverified' }, branchRestore: { state: 'unverified', strategy: 'fresh-conversation-active-history' } };
+    const capabilities = { connection: { state: result.mode === 'demo' ? 'development_demo' : result.status === 'completed' ? 'observed' : 'failed', at: now() }, output: { state: result.mode, answerDeltas: result.answerDeltas || 0, at: now() }, multiTurn: { state: 'unverified' }, cancellation: { state: raw.platform==='polymas'?'local_only':'unverified' }, branchRestore: { state: 'unverified', strategy: ['workflow','tool'].includes(integration.config.mode)?(integration.config.historyField?'explicit-history-input':'single-turn-only'):'fresh-conversation-active-history' } };
     run('UPDATE integrations SET capabilities=? WHERE id=?', JSON.stringify(capabilities), raw.id);
     run('UPDATE usage_logs SET status=?,finished_at=?,duration_ms=? WHERE id=?', result.status, now(), now() - stamp, invocationId);
     audit(req, 'integration.test', raw.id, { outcome: result.status });

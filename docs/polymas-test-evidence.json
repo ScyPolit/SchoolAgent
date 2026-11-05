@@ -1,0 +1,81 @@
+{
+  "date": "2026-11-05",
+  "scope": "Local non-Docker verification; no real Polymas business requests",
+  "build": {
+    "commit": "f4154b649efa37e1345ccc517a4d8d1ed2178c82",
+    "version": "v0.8.9-rc1",
+    "source": "upstream/LibreChat/client",
+    "localChangesManifestSha256": "4aab1e672794bea2d93e48fa721363a0563de5eb5f534416dfb047e28ef3c845",
+    "builtAt": "2026-11-05T12:52:03.793Z"
+  },
+  "backend": {
+    "command": "npm test",
+    "tests": 87,
+    "passed": 87,
+    "failed": 0,
+    "durationMs": 24252.796,
+    "localLog": "artifacts/polymas-backend-tests.log"
+  },
+  "client": {
+    "command": "npx jest src/components/School/__tests__ --runInBand --watch=false",
+    "suites": 4,
+    "tests": 15,
+    "passed": 15,
+    "failed": 0,
+    "typecheck": "npx tsc --noEmit passed",
+    "lint": "Changed School components and their new tests passed scoped ESLint",
+    "build": "npm run build:client passed"
+  },
+  "browser": {
+    "mode": "independent headless sessions; user foreground browser not controlled",
+    "verified": [
+      "Polymas tool profile creation through actual LibreChat primitives",
+      "Separate appCode and encrypted gateway credentials",
+      "Saved history variable restored as a dropdown choice",
+      "Stored credentials remain empty in the editor",
+      "390px document width equals viewport; dialog width 357.5px",
+      "Homepage FAQ item and module checkbox saved through UI and confirmed by API",
+      "Homepage test edits restored and dummy integration credentials cleared"
+    ],
+    "screenshots": [
+      "artifacts/polymas-integration-desktop.png",
+      "artifacts/polymas-integration-mobile.png"
+    ]
+  },
+  "performance": {
+    "sourceCommit": "f4154b649efa37e1345ccc517a4d8d1ed2178c82",
+    "frontend": "actual upstream production build",
+    "database": "campus SQLite; no upstream Mongo latency injection",
+    "reportDirectory": "artifacts/performance-campus/attempt-2026-11-05T12-58-21-771Z",
+    "memoryBefore": {
+      "totalBytes": 33745596416,
+      "freeBytes": 11798667264
+    },
+    "runs": 3,
+    "validRuns": 3,
+    "runtimeErrors": [],
+    "budgets": {
+      "lcpMs": 4500,
+      "cls": 0.1,
+      "tbtMs": 500
+    },
+    "measured": {
+      "lcpMs": 1265.274,
+      "cls": 0.02042023640661939,
+      "tbtMs": 244.47299999999973
+    },
+    "transcriptIsLcp": [
+      true,
+      true,
+      true
+    ],
+    "passed": true,
+    "completedAt": "2026-11-05T12:59:35.242Z"
+  },
+  "excluded": [
+    "Actual school Polymas authorization/encryption interoperability and business answers",
+    "Actual school Dify application",
+    "Production SMTP, school HTTPS/VPN, real WeChat device and real upstream capacity",
+    "Docker commands, builds and deployment"
+  ]
+}

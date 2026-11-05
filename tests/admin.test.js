@@ -7,7 +7,7 @@ process.env.ENABLE_DEMO_ADAPTER='true';
 process.env.ENCRYPTION_KEY=randomBytes(32).toString('hex');
 const {createApp}=await import('../server/index.js');
 const {db,run,get,id,now,setting,parse}=await import('../server/db.js');
-const {hashPassword}=await import('../server/security.js');
+const {hashPassword,decrypt}=await import('../server/security.js');
 const app=createApp(),server=app.listen(0,'127.0.0.1');
 await new Promise(resolve=>server.once('listening',resolve));
 const base=`http://127.0.0.1:${server.address().port}/api`;
@@ -76,6 +76,24 @@ test('retention shortening requires confirmation and cleanup permission; preview
  assert.equal((await root('/admin/retention/preview','POST',{guestServerDays:30})).status,200);
  assert.equal((await root('/admin/settings/retention','PUT',{guestServerDays:30,confirmShortening:true})).status,200);
  assert.equal(setting('retention').guestServerDays,30);
+});
+
+test('Polymas structured credentials are encrypted, partially replaceable, redacted and protected by separate permission',async()=>{
+ const credentials={gatewayAppId:'test-gateway-id',appKey:'private-polymas-app-key',paramKey:'private-polymas-param-key'};
+ assert.equal((await manager('/admin/integrations/polymas','PATCH',{credentials})).status,403);
+ const created=await root('/admin/integrations','POST',{name:'Polymas 工具',platform:'polymas',appId:'test-bot-code',config:{mode:'tool'},credentials});
+ assert.equal(created.status,201);const integrationId=created.body.id;
+ assert.equal(created.body.hasSecret,true);
+ assert.deepEqual(JSON.parse(decrypt(get('SELECT secret FROM integrations WHERE id=?',integrationId).secret)),credentials);
+ const response=await root('/admin/integrations/'+integrationId,'PATCH',{credentials:{gatewayAppId:'',appKey:'rotated-polymas-app-key',paramKey:''},config:{mode:'assistant'}});
+ assert.equal(response.status,200);
+ assert.deepEqual(JSON.parse(decrypt(get('SELECT secret FROM integrations WHERE id=?',integrationId).secret)),{...credentials,appKey:'rotated-polymas-app-key'});
+ const serialized=JSON.stringify((await root('/admin/integrations')).body)+JSON.stringify((await root('/admin/audit')).body);
+ for(const key of Object.values(credentials))assert.ok(!serialized.includes(key));
+ assert.ok(!serialized.includes('rotated-polymas-app-key'));
+ assert.equal((await root('/admin/integrations/'+integrationId,'PATCH',{config:{inputs:{appKey:'plaintext'}}})).body.code,'CREDENTIAL_IN_CONFIG');
+ assert.equal((await root('/admin/integrations/'+integrationId,'PATCH',{apiKey:'wrong-platform-key'})).status,400);
+ assert.equal((await root('/admin/integrations/'+integrationId,'PATCH',{clearSecret:true})).body.hasSecret,false);
 });
 test('admin audit stores operation metadata without passwords, keys or message bodies',async()=>{
  const rows=(await root('/admin/audit')).body;assert.ok(rows.some(row=>row.action==='admin.integration_updated'));const serialized=JSON.stringify(rows);assert.ok(!serialized.includes(password));assert.ok(!serialized.includes('private-api-key'));assert.ok(!serialized.includes('restricted-body'));
