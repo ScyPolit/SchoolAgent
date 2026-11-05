@@ -253,6 +253,7 @@ const mockCreatedHandler = jest.fn();
 const mockStepHandler = jest.fn();
 const mockTitleHandler = jest.fn();
 const mockContentHandler = jest.fn();
+const mockMessageHandler = jest.fn();
 const mockSyncHandler = jest.fn();
 const mockSetIsSubmitting = jest.fn();
 const mockClearStepMaps = jest.fn();
@@ -278,7 +279,7 @@ jest.mock('~/hooks/SSE/useEventHandlers', () => {
       flushPendingDeltas: jest.fn(),
       cancelPendingDeltaFlush: jest.fn(),
       abortConversation: jest.fn(),
-      messageHandler: jest.fn(),
+      messageHandler: mockMessageHandler,
       setIsSubmitting: mockSetIsSubmitting,
       setShowStopButton: jest.fn(),
     })),
@@ -434,6 +435,7 @@ describe('useResumableSSE', () => {
     mockFinalHandler.mockClear();
     mockCreatedHandler.mockClear();
     mockStepHandler.mockClear();
+    mockMessageHandler.mockClear();
     mockTitleHandler.mockClear();
     mockClearStepMaps.mockClear();
     mockSetIsSubmitting.mockClear();
@@ -742,6 +744,38 @@ describe('useResumableSSE', () => {
     },
   );
 
+  it('replaces stale campus content parts for each real cumulative text frame', async () => {
+    const submission = buildSubmission();
+    if (!submission.initialResponse) throw new Error('Missing response fixture');
+    submission.initialResponse.endpoint = 'campus';
+    submission.initialResponse.content = [{ type: ContentTypes.TEXT, text: '' }];
+    const { unmount } = renderHook(() => useResumableSSE(submission, buildChatHelpers()));
+    await flushMicrotasks();
+    const sse = getLastSSE();
+    for (const text of ['实时首段', '实时首段与下一段']) {
+      await act(async () => {
+        sse._emit('message', {
+          data: JSON.stringify({
+            message: true,
+            messageId: 'resp-1',
+            parentMessageId: 'msg-1',
+            text,
+          }),
+        });
+      });
+      expect(mockMessageHandler).toHaveBeenLastCalledWith(
+        text,
+        expect.objectContaining({
+          initialResponse: expect.objectContaining({
+            content: [{ type: ContentTypes.TEXT, text }],
+          }),
+        }),
+      );
+    }
+    sse.readyState = MOCK_SSE_CLOSED;
+    unmount();
+  });
+
   it('clears the text and files draft from localStorage on 404', async () => {
     seedDraft(CONV_ID);
     expect(localStorage.getItem(`${LocalStorageKeys.TEXT_DRAFT}${CONV_ID}`)).not.toBeNull();
@@ -1038,7 +1072,7 @@ describe('useResumableSSE', () => {
     await advanceRetryTimer(1_000);
     expect(mockSSEInstances).toHaveLength(2);
     expect(getLastSSE()._url).toBe(
-      '/api/agents/chat/stream/stream-123?resume=true&generationCreatedAt=1000&generationProtocolVersion=2',
+      '/api/librechat/agents/chat/stream/stream-123?resume=true&generationCreatedAt=1000&generationProtocolVersion=2',
     );
     unmount();
   });
@@ -2074,7 +2108,7 @@ describe('useResumableSSE', () => {
 
     const initialSSE = getLastSSE();
     expect(initialSSE._url).toBe(
-      '/api/agents/chat/stream/stream-epoch?generationCreatedAt=1000&generationProtocolVersion=2',
+      '/api/librechat/agents/chat/stream/stream-epoch?generationCreatedAt=1000&generationProtocolVersion=2',
     );
     expect(initialSSE.headers).toEqual({
       Authorization: 'Bearer test-token',
@@ -2091,7 +2125,7 @@ describe('useResumableSSE', () => {
     await advanceRetryTimer(1000);
 
     expect(getLastSSE()._url).toBe(
-      '/api/agents/chat/stream/stream-epoch?resume=true&generationCreatedAt=1000&generationProtocolVersion=2',
+      '/api/librechat/agents/chat/stream/stream-epoch?resume=true&generationCreatedAt=1000&generationProtocolVersion=2',
     );
     unmount();
   });
@@ -2118,7 +2152,7 @@ describe('useResumableSSE', () => {
 
     expect(mockSSEInstances).toHaveLength(2);
     expect(getLastSSE()._url).toBe(
-      '/api/agents/chat/stream/stream-123?resume=true&generationCreatedAt=1000&generationProtocolVersion=2',
+      '/api/librechat/agents/chat/stream/stream-123?resume=true&generationCreatedAt=1000&generationProtocolVersion=2',
     );
     expect(mockErrorHandler).not.toHaveBeenCalled();
     unmount();
@@ -5428,7 +5462,7 @@ describe('useResumableSSE', () => {
 
     expect(mockSSEInstances).toHaveLength(sseCount + 1);
     expect(getLastSSE()._url).toBe(
-      '/api/agents/chat/stream/stream-epoch?resume=true&generationCreatedAt=1000&generationProtocolVersion=2',
+      '/api/librechat/agents/chat/stream/stream-epoch?resume=true&generationCreatedAt=1000&generationProtocolVersion=2',
     );
     unmount();
   });
@@ -5466,7 +5500,7 @@ describe('useResumableSSE', () => {
 
     expect(mockSSEInstances).toHaveLength(sseCount + 2);
     expect(getLastSSE()._url).toBe(
-      '/api/agents/chat/stream/stream-epoch?resume=true&generationCreatedAt=1000&generationProtocolVersion=2',
+      '/api/librechat/agents/chat/stream/stream-epoch?resume=true&generationCreatedAt=1000&generationProtocolVersion=2',
     );
     unmount();
   });
@@ -5542,7 +5576,7 @@ describe('useResumableSSE', () => {
 
     expect(mockSSEInstances).toHaveLength(sseCount + 1);
     expect(getLastSSE()._url).toBe(
-      '/api/agents/chat/stream/stream-epoch?resume=true&generationCreatedAt=1000&generationProtocolVersion=2',
+      '/api/librechat/agents/chat/stream/stream-epoch?resume=true&generationCreatedAt=1000&generationProtocolVersion=2',
     );
     unmount();
   });
@@ -5589,7 +5623,7 @@ describe('useResumableSSE', () => {
     expect(mockFetchStreamStatus).toHaveBeenCalledWith(CONV_ID);
     expect(mockSSEInstances).toHaveLength(sseCount + 1);
     expect(getLastSSE()._url).toBe(
-      '/api/agents/chat/stream/stream-epoch?resume=true&generationCreatedAt=1000&generationProtocolVersion=2',
+      '/api/librechat/agents/chat/stream/stream-epoch?resume=true&generationCreatedAt=1000&generationProtocolVersion=2',
     );
     expect(initialSSE.close).toHaveBeenCalledTimes(1);
 

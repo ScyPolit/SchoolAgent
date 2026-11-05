@@ -127,6 +127,12 @@ export default function IntegrationEditor({
       if (polymas) {
         next.encryption = encryption;
         next.authHeader = string(config.authHeader, 'raw');
+        if (
+          mode === 'tool' &&
+          next.toolTextMode &&
+          (next.answerField !== 'text' || responseMode !== 'streaming')
+        )
+          next.toolTextMode = 'final';
       }
       let credentials: Config = apiKey ? { apiKey } : {};
       if (polymas) credentials = { credentials: { gatewayAppId, appKey, paramKey } };
@@ -378,6 +384,23 @@ export default function IntegrationEditor({
                     {mode === 'tool' && (
                       <p className="text-text-secondary text-xs">{t('toolTextOutputHint')}</p>
                     )}
+                    {mode === 'tool' &&
+                      responseMode === 'streaming' &&
+                      config.answerField === 'text' && (
+                        <>
+                          {select(
+                            'toolTextMode',
+                            string(config.toolTextMode, 'final'),
+                            [
+                              ['final', 'finalTextOnly'],
+                              ['delta', 'toolDeltaText'],
+                              ['snapshot', 'snapshotText'],
+                            ],
+                            (value) => update('toolTextMode', value),
+                          )}
+                          <p className="text-text-secondary text-xs">{t('toolStreamingHint')}</p>
+                        </>
+                      )}
                     {(mode === 'tool' ? toolHistoryMode === 'none' : !config.historyField) && (
                       <Alert variant="neutral">{t('singleTurnHint')}</Alert>
                     )}

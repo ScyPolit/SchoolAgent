@@ -86,6 +86,14 @@ function currentFrames(req, versionId) {
   const { version, conversation, message } = versionRecord(req, versionId);
   return { version, conversation, requestMessage: userMessage(message, conversation), responseMessage: answerMessage(version, message, conversation, req.identity) };
 }
+function streamRecord(req, streamId) {
+  // Native LibreChat keys generation controls by conversation; older clients used a version ID.
+  const conversation = get('SELECT id FROM conversations WHERE id=?', String(streamId));
+  if (!conversation) return versionRecord(req, streamId);
+  const owned = ownedConversation(req, conversation.id);
+  if (!owned.active_version_id) throw new HttpError(404, '生成任务不存在', 'ANSWER_NOT_FOUND');
+  return versionRecord(req, owned.active_version_id);
+}
 function finalFrame(req, versionId) {
   const value = currentFrames(req, versionId);
   return { final: true, generationProtocolVersion: 1, generationCreatedAt: value.version.created_at, terminalStatus: state(value.version.status), aborted: value.version.status === 'stopped', requestMessage: value.requestMessage, responseMessage: value.responseMessage, conversation: librechatConversation(value.conversation), runMessages: librechatMessages(value.conversation, req.identity), ...(value.version.error_message ? { error: { message: value.version.error_message } } : {}) };
@@ -96,7 +104,7 @@ function resumeState(req, versionId) {
 }
 function statusView(req, versionId) {
   const value = currentFrames(req, versionId);
-  return { active: value.version.status === 'running', streamId: versionId, status: state(value.version.status), createdAt: value.version.created_at, elapsedMs: (value.version.finished_at || now()) - value.version.created_at, generationProtocolVersion: 1, aggregatedContent: value.responseMessage.content, resumeState: resumeState(req, versionId), unrecoveredSteers: [] };
+  return { active: value.version.status === 'running', streamId: value.conversation.id, status: state(value.version.status), createdAt: value.version.created_at, elapsedMs: (value.version.finished_at || now()) - value.version.created_at, generationProtocolVersion: 1, aggregatedContent: value.responseMessage.content, resumeState: resumeState(req, versionId), unrecoveredSteers: [] };
 }
 
 librechatCompatRouter.get('/convos', (req, res) => {
@@ -176,7 +184,7 @@ async function startGeneration(req, res) {
   if (previous) {
     if (parse(previous.scope).requestFingerprint !== fingerprint) throw new HttpError(409, '请求标识已用于不同内容，禁止重复执行', 'CLIENT_REQUEST_CONFLICT');
     const value = versionRecord(req, previous.version_id);
-    return res.json({ streamId: value.version.id, conversationId: value.conversation.id, generationCreatedAt: value.version.created_at, generationProtocolVersion: 1, status: 'resumed' });
+    return res.json({ streamId: value.conversation.id, versionId: value.version.id, conversationId: value.conversation.id, generationCreatedAt: value.version.created_at, generationProtocolVersion: 1, status: 'resumed' });
   }
   let conversation = body.conversationId && get('SELECT * FROM conversations WHERE id=?', body.conversationId);
   if (conversation) conversation = ownedConversation(req, conversation.id);
@@ -217,14 +225,22 @@ async function startGeneration(req, res) {
     const capture = new CampusResponse((data, code) => reject(new HttpError(code, data.error || '请求被拒绝', data.code)), event => {
       if (event.type === 'start') {
         const version = get('SELECT * FROM answer_versions WHERE id=?', event.versionId);
-        job = { versionId: event.versionId, conversationId: conversation.id, generationCreatedAt: version.created_at, identity: req.identity, listeners: new Set(), req };
+        job = { versionId: event.versionId, messageId: event.messageId, conversationId: conversation.id, generationCreatedAt: version.created_at, identity: req.identity, listeners: new Set(), req };
         live.set(event.versionId, job); resolve(job);
       }
       if (!job) return;
       try {
         let frame;
-        if (event.type === 'delta' || event.type === 'replace') { const value = currentFrames(req, job.versionId); frame = { message: true, text: value.responseMessage.text, messageId: job.versionId, parentMessageId: value.requestMessage.messageId }; }
-        if (event.type === 'progress') frame = { event: 'on_agent_update', data: { runId: job.versionId, message: event.message } };
+        if (event.type === 'delta' || event.type === 'replace') {
+          // The admitted job owns these IDs; the core has already persisted this fragment.
+          // Avoid rebuilding conversation, feedback and message metadata for every token.
+          const value = get('SELECT content FROM answer_versions WHERE id=?', job.versionId);
+          if (value) frame = { message: true, text: value.content, messageId: job.versionId, parentMessageId: job.messageId };
+        }
+        if (event.type === 'progress') {
+          job.progress = { phase: ['connecting', 'processing', 'generating'].includes(event.phase) ? event.phase : 'processing', startedAt: job.generationCreatedAt };
+          frame = { event: 'on_agent_update', data: { runId: job.versionId, campusProgress: job.progress } };
+        }
         if (event.type === 'done') frame = finalFrame(req, job.versionId);
         if (frame) for (const response of job.listeners) emit(response, frame);
         if (event.type === 'done') { for (const response of job.listeners) response.end(); job.listeners.clear(); live.delete(job.versionId); }
@@ -233,7 +249,7 @@ async function startGeneration(req, res) {
     chatRouter.handle(coreRequest(req, url, 'POST', requestBody), capture, error => reject(error || new HttpError(404, '调用接口不存在')));
   });
   const started = await admitted;
-  res.json({ streamId: started.versionId, conversationId: started.conversationId, generationCreatedAt: started.generationCreatedAt, generationProtocolVersion: 1, status: 'started' });
+  res.json({ streamId: started.conversationId, versionId: started.versionId, conversationId: started.conversationId, generationCreatedAt: started.generationCreatedAt, generationProtocolVersion: 1, status: 'started' });
 }
 librechatCompatRouter.post('/agents/chat/campus', startGeneration);
 librechatCompatRouter.post('/agents/chat/custom', startGeneration);
@@ -241,22 +257,24 @@ librechatCompatRouter.post('/agents/chat/agents', startGeneration);
 librechatCompatRouter.get('/agents/chat/active', (req, res) => res.json({ activeJobIds: [...live.values()].filter(job => job.identity.id === req.identity.id && job.identity.type === req.identity.type).map(job => job.conversationId) }));
 librechatCompatRouter.get('/agents/chat/status/:conversationId', (req, res) => { const row = ownedConversation(req, req.params.conversationId); if (!row.active_version_id) return res.json({ active: false, generationProtocolVersion: 1, unrecoveredSteers: [] }); res.json(statusView(req, row.active_version_id)); });
 librechatCompatRouter.get('/agents/chat/stream/:streamId', (req, res) => {
-  const value = currentFrames(req, req.params.streamId);
+  const record = streamRecord(req, req.params.streamId);
+  const value = currentFrames(req, record.version.id);
   if (req.query.generationCreatedAt && Number(req.query.generationCreatedAt) !== value.version.created_at) throw new HttpError(409, '生成轮次已变化，请刷新会话', 'GENERATION_REPLACED');
   res.set({ 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'X-Accel-Buffering': 'no' }); res.flushHeaders();
-  emit(res, { created: true, streamId: value.version.id, message: value.requestMessage });
+  emit(res, { created: true, streamId: value.conversation.id, message: value.requestMessage });
   emit(res, { sync: true, conversationId: value.conversation.id, requestMessage: value.requestMessage, responseMessage: value.responseMessage, resumeState: resumeState(req, value.version.id), pendingEvents: [] });
   emit(res, { message: true, text: value.responseMessage.text, messageId: value.version.id, parentMessageId: value.requestMessage.messageId });
   if (value.version.status !== 'running') { emit(res, finalFrame(req, value.version.id)); return res.end(); }
   const job = live.get(value.version.id);
   if (!job) { emit(res, { final: true, reconcile: true, terminalStatus: 'error', conversation: librechatConversation(value.conversation) }); return res.end(); }
   job.listeners.add(res);
+  if (job.progress) emit(res, { event: 'on_agent_update', data: { runId: job.versionId, campusProgress: job.progress } });
   const heartbeat = setInterval(() => { if (!res.destroyed && !res.writableEnded) res.write(': heartbeat\n\n'); }, 15000);
   res.on('close', () => { clearInterval(heartbeat); job.listeners.delete(res); });
 });
 librechatCompatRouter.post('/agents/chat/abort', async (req, res) => {
   let row;
-  if (req.body.streamId) row = versionRecord(req, req.body.streamId);
+  if (req.body.streamId) row = streamRecord(req, req.body.streamId);
   else if (req.body.conversationId && req.body.conversationId !== 'new') { const conversation = ownedConversation(req, req.body.conversationId); row = currentFrames(req, conversation.active_version_id); }
   else { const candidate = [...live.values()].find(job => job.identity.id === req.identity.id && job.identity.type === req.identity.type && job.generationCreatedAt === Number(req.body.generationCreatedAt)); if (candidate) row = currentFrames(req, candidate.versionId); }
   if (!row) throw new HttpError(404, '生成任务不存在', 'ANSWER_NOT_FOUND');

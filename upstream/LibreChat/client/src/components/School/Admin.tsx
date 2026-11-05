@@ -19,6 +19,7 @@ import type { TranslationKeys } from '~/hooks';
 import { schoolRequest, schoolKeys, schoolDownload, canSchool, useSchoolBootstrap } from './api';
 import MarkdownLite from '~/components/Chat/Messages/Content/MarkdownLite';
 import IntegrationEditor, { IntegrationTest } from './IntegrationEditor';
+import IntegrationGuide from './IntegrationGuide';
 import ContentEditor, { DurationChoice } from './ContentEditor';
 import OpenSidebar from '~/components/Chat/Menus/OpenSidebar';
 import Section from '~/components/Nav/Settings/Section';
@@ -745,6 +746,11 @@ function Resource({ page, user, catalog }: { page: string; user: SchoolUser; cat
                 {t('duration')}: {Number(r.durationMs) / 1000} {t('seconds')}
               </p>
             )}
+            {r.firstAnswerMs != null && (
+              <p>
+                {t('firstAnswer')}: {Number(r.firstAnswerMs) / 1000} {t('seconds')}
+              </p>
+            )}
             {r.executionMode != null && <p>{executionLabel}</p>}
             {r.capabilities != null && (
               <details>
@@ -1364,20 +1370,25 @@ export default function SchoolAdmin() {
           aria-label={t('admin')}
         >
           {allowed.map(([key]) => (
-            <Button
-              key={key}
-              variant="nav"
-              size="row"
-              className="justify-start"
-              aria-current={current === key ? 'page' : undefined}
-              onClick={() => setPage(key)}
-            >
-              {t(key)}
-            </Button>
+            <div key={key} className="flex shrink-0 items-center gap-1">
+              <Button
+                variant="nav"
+                size="row"
+                className="flex-1 justify-start"
+                aria-current={current === key ? 'page' : undefined}
+                onClick={() => setPage(key)}
+              >
+                {t(key)}
+              </Button>
+              {key === 'integrations' && <IntegrationGuide compact />}
+            </div>
           ))}
         </nav>
         <div className="min-w-0 flex-1 overflow-y-auto p-5 md:p-7">
-          <h2 className="mb-6 text-xl font-medium">{t(current)}</h2>
+          <div className="mb-6 flex flex-wrap items-center gap-3">
+            <h2 className="text-xl font-medium">{t(current)}</h2>
+            {current === 'integrations' && <IntegrationGuide />}
+          </div>
           {catalog.isLoading && <Spinner />}
           {catalog.error instanceof Error && <Alert variant="error">{catalog.error.message}</Alert>}
           {!catalog.isLoading &&

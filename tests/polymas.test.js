@@ -163,10 +163,55 @@ test('invalid credentials and mapping fail before business dispatch; invalid tok
   assert.equal(authCalls, 2); assert.equal(posts, 2);
   const rejected = [];
   await assert.rejects(createPolymasAdapter(integration({ queryField: '' }), fetcher).run(input(e => rejected.push(e))), { code: 'POLYMAS_MAPPING_REQUIRED' });
-  assert.equal(rejected.length, 0); assert.equal(posts, 2);
+  assert.equal(rejected.filter(e => e.type === 'dispatch').length, 0); assert.equal(posts, 2);
   const tokenFailure = async () => Response.json({ code: 40005, message: 'sensitive details' });
   await assert.rejects(createPolymasAdapter(integration(), tokenFailure).run(input(e => rejected.push(e))), { code: 'POLYMAS_40005' });
-  assert.equal(rejected.length, 0);
+  assert.equal(rejected.filter(e => e.type === 'dispatch').length, 0);
+});
+
+test('opt-in tool stream forwards a real first fragment before completion, batches bursts, and reconciles final text', async () => {
+  let release, first;
+  const reachedFirst = new Promise(resolve => { first = resolve; });
+  const events = [];
+  const body = new ReadableStream({ start(controller) {
+    const send = (event, value) => controller.enqueue(new TextEncoder().encode(`event:${event}\ndata:${JSON.stringify(value)}\n\n`));
+    send('NODE_OUTPUT', { text: 'private node' });
+    send('ANSWER', { text: 'private classifier', event: { eventType: 'CLASSIFIER' } });
+    send('ANSWER', { text: '第一段', data: { reasoning: 'private reasoning' }, event: { eventType: 'LLM' } });
+    for (const text of ['，', '后', '续', '片', '段']) send('ANSWER', { text, event: { eventType: 'LLM' } });
+    release = () => { send('OUT_COMPLETE', { text: '正式校正后的最终答案' }); controller.close(); };
+  } });
+  const fetcher = async url => url.includes('/api/token?') ? token() : new Response(body, { headers: { 'Content-Type': 'text/event-stream' } });
+  const running = createPolymasAdapter(integration({ answerField: 'text', toolTextMode: 'delta' }), fetcher).run(input(event => { events.push(event); if (event.type === 'delta') first(); }));
+  try {
+    await Promise.race([reachedFirst, new Promise((_, reject) => setTimeout(() => reject(new Error('First fragment was buffered until final')), 2000).unref())]);
+    assert.equal(events.find(e => e.type === 'delta').text, '第一段');
+    assert.ok(!events.some(e => e.complete));
+  } finally { release(); }
+  const result = await running;
+  assert.equal(result.mode, 'incremental');
+  assert.ok(result.answerDeltas < 6);
+  assert.deepEqual(events.filter(e => e.type === 'replace').at(-1), { type: 'replace', text: '正式校正后的最终答案', complete: true });
+  assert.ok(!JSON.stringify(events).includes('private'));
+});
+
+test('tool snapshot streams replace cumulative text, while incomplete streams keep partial output without claiming success', async () => {
+  const events = [];
+  const fetcher = async url => url.includes('/api/token?') ? token() : stream([
+    ['ANSWER', { text: '你', event: { eventType: 'LLM' } }],
+    ['ANSWER', { text: '你好', event: { eventType: 'LLM' } }],
+    ['OUT_COMPLETE', { text: '你好' }],
+  ]);
+  const result = await createPolymasAdapter(integration({ answerField: 'text', toolTextMode: 'snapshot' }), fetcher).run(input(e => events.push(e)));
+  assert.equal(result.status, 'completed');
+  assert.deepEqual(events.filter(e => e.type === 'replace').map(e => e.text), ['你', '你好']);
+  const partial = [];
+  const incomplete = async url => url.includes('/api/token?') ? token() : stream([['ANSWER', { text: '已收到的部分正文' }]]);
+  await assert.rejects(createPolymasAdapter(integration({ answerField: 'text', toolTextMode: 'delta' }), incomplete).run(input(e => partial.push(e))), { code: 'UPSTREAM_INCOMPLETE' });
+  assert.equal(partial.filter(e => e.type === 'delta').map(e => e.text).join(''), '已收到的部分正文');
+  assert.ok(!partial.some(e => e.complete));
+  assert.throws(() => createPolymasAdapter(integration({ answerField: 'answer', toolTextMode: 'delta' })), { code: 'POLYMAS_STREAM_MODE_INVALID' });
+  assert.throws(() => createPolymasAdapter(integration({ answerField: 'text', toolTextMode: 'delta', responseMode: 'blocking' })), { code: 'POLYMAS_STREAM_MODE_INVALID' });
 });
 
 test('aborting during token acquisition prevents business dispatch without poisoning other callers; remote stop is local-only', async () => {

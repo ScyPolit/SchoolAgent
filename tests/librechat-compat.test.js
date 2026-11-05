@@ -32,22 +32,23 @@ async function stream(result, options) { const response = await request(`/agents
 
 test('actual LibreChat JSON admission and SSE created/sync/cumulative/final reuse original campus data', async () => {
   const { result } = await start(); assert.equal(result.generationProtocolVersion, 1); assert.ok(Number.isSafeInteger(result.generationCreatedAt));
+  assert.equal(result.streamId, result.conversationId);
   const frames = await stream(result);
   assert.equal(frames[0].created, true); assert.equal(frames[1].sync, true);
   const final = frames.at(-1); assert.equal(final.final, true); assert.equal(final.terminalStatus, 'complete');
   assert.equal(final.requestMessage.isCreatedByUser, true); assert.equal(final.responseMessage.isCreatedByUser, false);
-  assert.equal(final.responseMessage.messageId, result.streamId);
+  assert.equal(final.responseMessage.messageId, result.versionId);
   assert.equal(final.responseMessage.parentMessageId, final.requestMessage.messageId);
   assert.equal(final.conversation.conversationId, result.conversationId);
   assert.ok(frames.filter(frame => frame.message === true).length > 2);
   const persisted = snapshotConversation(result.conversationId); assert.equal(persisted.messages[1].content, final.responseMessage.text);
-  const native = await json(`/messages/${result.conversationId}`); assert.equal(native.length, 2); assert.equal(native[1].messageId, result.streamId);
+  const native = await json(`/messages/${result.conversationId}`); assert.equal(native.length, 2); assert.equal(native[1].messageId, result.versionId);
   const list = await json('/convos'); assert.ok(list.conversations.some(row => row.conversationId === result.conversationId));
 });
 
 test('network retry request IDs deduplicate execution, reject changed payload and preserve settled reconnect', async () => {
   const { result, payload } = await start();
-  const duplicate = await json('/agents/chat/campus', { method: 'POST', body: payload }); assert.equal(duplicate.streamId, result.streamId); assert.equal(duplicate.status, 'resumed');
+  const duplicate = await json('/agents/chat/campus', { method: 'POST', body: payload }); assert.equal(duplicate.versionId, result.versionId); assert.equal(duplicate.status, 'resumed');
   const changed = await request('/agents/chat/campus', { method: 'POST', body: { ...payload, text: '重复标识换问题' } }); assert.equal(changed.status, 409);
   await stream(result);
   const replay = await stream(result); assert.equal(replay.at(-1).final, true);
@@ -57,7 +58,7 @@ test('network retry request IDs deduplicate execution, reject changed payload an
 test('native stop is generation-fenced and retains partial body/cancellation fact', async () => {
   const { result } = await start({ text: '足够长的开发演示停止生成问题，用于验证原生停止按钮。' });
   const stale = await request('/agents/chat/abort', { method: 'POST', body: { streamId: result.streamId, generationCreatedAt: result.generationCreatedAt - 1 } }); assert.equal(stale.status, 409);
-  const stopped = await json('/agents/chat/abort', { method: 'POST', body: { conversationId: result.conversationId, generationCreatedAt: result.generationCreatedAt } });
+  const stopped = await json('/agents/chat/abort', { method: 'POST', body: { streamId: result.streamId, generationCreatedAt: result.generationCreatedAt } });
   assert.equal(stopped.cancellationState, 'local_only');
   const replay = await stream(result); assert.equal(replay.at(-1).aborted, true); assert.equal(replay.at(-1).responseMessage.metadata.campusStatus, 'stopped');
   assert.equal((await json(`/agents/chat/status/${result.conversationId}`)).active, false);
@@ -69,17 +70,17 @@ test('native branch regeneration preserves sibling IDs and next turn follows exp
   await stream(regenerated.result);
   let messages = await json(`/messages/${first.result.conversationId}`);
   assert.equal(messages.filter(message => !message.isCreatedByUser).length, 2);
-  assert.equal(messages.at(-1).messageId, regenerated.result.streamId);
-  await json(`/messages/${first.result.conversationId}/${first.result.streamId}/activate`, { method: 'POST', body: {} });
-  messages = await json(`/messages/${first.result.conversationId}`); assert.equal(messages.at(-1).messageId, first.result.streamId);
-  const next = await start({ conversationId: first.result.conversationId, text: '旧分支继续提问', parentMessageId: first.result.streamId }); await stream(next.result);
-  const question = get('SELECT m.* FROM messages m JOIN answer_versions v ON v.message_id=m.id WHERE v.id=?', next.result.streamId); assert.equal(question.parent_version_id, first.result.streamId);
+  assert.equal(messages.at(-1).messageId, regenerated.result.versionId);
+  await json(`/messages/${first.result.conversationId}/${first.result.versionId}/activate`, { method: 'POST', body: {} });
+  messages = await json(`/messages/${first.result.conversationId}`); assert.equal(messages.at(-1).messageId, first.result.versionId);
+  const next = await start({ conversationId: first.result.conversationId, text: '旧分支继续提问', parentMessageId: first.result.versionId }); await stream(next.result);
+  const question = get('SELECT m.* FROM messages m JOIN answer_versions v ON v.message_id=m.id WHERE v.id=?', next.result.versionId); assert.equal(question.parent_version_id, first.result.versionId);
 });
 
 test('actual native regeneration accepts a validated override user ID with fresh optimistic IDs', async () => {
   const first = await start({ text: '原生重新生成按钮的问题' });
   const original = (await stream(first.result)).at(-1);
-  const body = { conversationId: first.result.conversationId, text: first.payload.text, messageId: randomUUID(), parentMessageId: NO_PARENT, overrideParentMessageId: original.requestMessage.messageId, responseMessageId: first.result.streamId + '_', isRegenerate: true, generationProtocolVersion: 2 };
+  const body = { conversationId: first.result.conversationId, text: first.payload.text, messageId: randomUUID(), parentMessageId: NO_PARENT, overrideParentMessageId: original.requestMessage.messageId, responseMessageId: first.result.versionId + '_', isRegenerate: true, generationProtocolVersion: 2 };
   const regenerated = await start(body); const final = (await stream(regenerated.result)).at(-1);
   assert.equal(final.requestMessage.messageId, original.requestMessage.messageId);
   assert.notEqual(final.responseMessage.messageId, original.responseMessage.messageId);
@@ -94,19 +95,19 @@ test('actual native regeneration accepts a validated override user ID with fresh
 
 test('activating the visible descendant leaf restores full native history and immediate export after an ancestor switch', async () => {
   const first = await start({ text: '有后续子分支的原问题' }), original = (await stream(first.result)).at(-1);
-  const second = await start({ conversationId: first.result.conversationId, parentMessageId: first.result.streamId, text: '已保存的第二轮应在导出中保留' }); await stream(second.result);
+  const second = await start({ conversationId: first.result.conversationId, parentMessageId: first.result.versionId, text: '已保存的第二轮应在导出中保留' }); await stream(second.result);
   const regenerated = await start({ conversationId: first.result.conversationId, text: first.payload.text, isRegenerate: true, overrideParentMessageId: original.requestMessage.messageId }); await stream(regenerated.result);
   // Exact ancestor activation is deliberately a prefix selection, used when
   // explicitly forking a new question from that parent. Keep that contract.
-  await json(`/messages/${first.result.conversationId}/${first.result.streamId}/activate`, { method: 'POST', body: {} });
+  await json(`/messages/${first.result.conversationId}/${first.result.versionId}/activate`, { method: 'POST', body: {} });
   assert.equal(snapshotConversation(first.result.conversationId).messages.length, 2);
   const graph = await json(`/messages/${first.result.conversationId}`);
-  assert.ok(graph.some(message => message.messageId === second.result.streamId));
+  assert.ok(graph.some(message => message.messageId === second.result.versionId));
   // Native sibling switching displays existing descendants, so the UI hook
   // resolves and activates that visible leaf before committing the switch.
-  await json(`/messages/${first.result.conversationId}/${second.result.streamId}/activate`, { method: 'POST', body: {} });
+  await json(`/messages/${first.result.conversationId}/${second.result.versionId}/activate`, { method: 'POST', body: {} });
   assert.equal(snapshotConversation(first.result.conversationId).messages.length, 4);
-  assert.equal(get('SELECT active_version_id FROM conversations WHERE id=?', first.result.conversationId).active_version_id, second.result.streamId);
+  assert.equal(get('SELECT active_version_id FROM conversations WHERE id=?', first.result.conversationId).active_version_id, second.result.versionId);
   const exported = await request(`/convos/${first.result.conversationId}/export?format=md`);
   assert.equal(exported.status, 200); assert.ok((await exported.text()).includes('已保存的第二轮应在导出中保留'));
   const share = await json(`/share/${first.result.conversationId}`, { method: 'POST', body: {} });
@@ -119,21 +120,21 @@ test('native conv rename/archive/pin persist and native feedback traces exact ca
   const pinned = await json('/convos/pin', { method: 'POST', body: { arg: { conversationId: result.conversationId, pinned: true } } }); assert.equal(pinned.pinned, true);
   const archived = await json('/convos/archive', { method: 'POST', body: { arg: { conversationId: result.conversationId, isArchived: true } } }); assert.equal(archived.isArchived, true);
   assert.ok((await json('/convos?isArchived=true')).conversations.some(row => row.conversationId === result.conversationId));
-  await json(`/messages/${result.conversationId}/${result.streamId}/feedback`, { method: 'PUT', body: { feedback: { rating: 'thumbsDown', tag: 'inaccurate', text: '原生反馈正文' } } });
-  assert.equal(get('SELECT text FROM feedback WHERE version_id=?', result.streamId).text, '原生反馈正文');
+  await json(`/messages/${result.conversationId}/${result.versionId}/feedback`, { method: 'PUT', body: { feedback: { rating: 'thumbsDown', tag: 'inaccurate', text: '原生反馈正文' } } });
+  assert.equal(get('SELECT text FROM feedback WHERE version_id=?', result.versionId).text, '原生反馈正文');
 });
 
 test('native edit of first question preserves both root branches and orders the selected root last on reload', async () => {
   const first = await start({ text: '最初的问题' }); await stream(first.result);
   const edited = await start({ text: '编辑后的第一问', conversationId: first.result.conversationId, parentMessageId: NO_PARENT }); await stream(edited.result);
-  let graph = await json(`/messages/${first.result.conversationId}`); assert.equal(graph.filter(message => message.isCreatedByUser && message.parentMessageId === NO_PARENT).length, 2); assert.equal(graph.at(-1).messageId, edited.result.streamId);
-  await json(`/messages/${first.result.conversationId}/${first.result.streamId}/activate`, { method: 'POST', body: {} });
-  graph = await json(`/messages/${first.result.conversationId}`); assert.equal(graph.at(-1).messageId, first.result.streamId); assert.equal(snapshotConversation(first.result.conversationId).messages[0].content, '最初的问题');
+  let graph = await json(`/messages/${first.result.conversationId}`); assert.equal(graph.filter(message => message.isCreatedByUser && message.parentMessageId === NO_PARENT).length, 2); assert.equal(graph.at(-1).messageId, edited.result.versionId);
+  await json(`/messages/${first.result.conversationId}/${first.result.versionId}/activate`, { method: 'POST', body: {} });
+  graph = await json(`/messages/${first.result.conversationId}`); assert.equal(graph.at(-1).messageId, first.result.versionId); assert.equal(snapshotConversation(first.result.conversationId).messages[0].content, '最初的问题');
 });
 
 test('native shares freeze content, revoke on hide, and cross-user/guest actions cannot bypass original authorization', async () => {
   const { result } = await start(); await stream(result);
-  for (const path of [`/convos/${result.conversationId}`, `/messages/${result.conversationId}`, `/agents/chat/stream/${result.streamId}`, `/agents/chat/status/${result.conversationId}`]) assert.equal((await request(path, { user: 'other' })).status, 404);
+  for (const path of [`/convos/${result.conversationId}`, `/messages/${result.conversationId}`, `/agents/chat/stream/${result.versionId}`, `/agents/chat/status/${result.conversationId}`]) assert.equal((await request(path, { user: 'other' })).status, 404);
   const share = await json(`/share/${result.conversationId}`, { method: 'POST', body: {} });
   assert.ok((await json('/share')).links.some(link => link.shareId === share.shareId));
   const publicContent = await json(`/share/${share.shareId}`, { user: null }); assert.equal(publicContent.messages.length, 2); assert.equal(publicContent.conversationId, null);
@@ -178,14 +179,14 @@ test('disabled native tool-call history returns a real empty array only for an o
 
 test('native share target contains only the chosen branch prefix and history search stays owner scoped', async () => {
   const first = await start({ text: '只分享这一问' }); await stream(first.result);
-  const next = await start({ text: '后续敏感内容不应泄露', conversationId: first.result.conversationId, parentMessageId: first.result.streamId }); await stream(next.result);
-  const share = await json(`/share/${first.result.conversationId}`, { method: 'POST', body: { targetMessageId: first.result.streamId } });
+  const next = await start({ text: '后续敏感内容不应泄露', conversationId: first.result.conversationId, parentMessageId: first.result.versionId }); await stream(next.result);
+  const share = await json(`/share/${first.result.conversationId}`, { method: 'POST', body: { targetMessageId: first.result.versionId } });
   const snapshot = await json(`/share/${share.shareId}`, { user: null }); assert.equal(snapshot.messages.length, 2); assert.ok(!JSON.stringify(snapshot).includes('后续敏感内容'));
-  const selected = await json(`/share/link/${first.result.conversationId}`); assert.equal(selected.targetMessageId, first.result.streamId);
+  const selected = await json(`/share/link/${first.result.conversationId}`); assert.equal(selected.targetMessageId, first.result.versionId);
   const matches = await json('/messages?search=' + encodeURIComponent('后续敏感内容')); assert.ok(matches.messages.some(message => message.conversationId === first.result.conversationId));
   const denied = await json('/messages?search=' + encodeURIComponent('后续敏感内容'), { user: 'other' }); assert.equal(denied.messages.length, 0);
   const foreign = await start({}, { user: 'other' }); await stream(foreign.result, { user: 'other' });
-  const invalid = await request(`/share/${first.result.conversationId}`, { method: 'POST', body: { targetMessageId: foreign.result.streamId } }); assert.equal(invalid.status, 404);
+  const invalid = await request(`/share/${first.result.conversationId}`, { method: 'POST', body: { targetMessageId: foreign.result.versionId } }); assert.equal(invalid.status, 404);
 });
 
 test('native delete all hides more than one history page while preserving another owner', async () => {
@@ -226,7 +227,7 @@ test('production createApp mount and real campus cookie authorize native admissi
         const restrictedConfig = await (await fetch(origin + '/api/librechat/config', { headers })).json(); assert.ok(!restrictedConfig.modelSpecs.list.some(value => value.name === spec.name));
         const retained = await fetch(origin + `/api/librechat/convos/${started.conversationId}`, { headers }); assert.equal(retained.status, 200); assert.equal((await retained.json()).model, spec.preset.model);
         const retainedMessages = await fetch(origin + `/api/librechat/messages/${started.conversationId}`, { headers }); assert.equal(retainedMessages.status, 200); assert.equal((await retainedMessages.json()).length, 2);
-        const denied = await fetch(origin + '/api/librechat/agents/chat/campus', { method: 'POST', headers, body: JSON.stringify({ text: '权限变化后禁止新执行', model: spec.preset.model, spec: spec.name, conversationId: started.conversationId, messageId: randomUUID(), clientRequestId: randomUUID(), parentMessageId: started.streamId }) }); assert.equal(denied.status, 403);
+        const denied = await fetch(origin + '/api/librechat/agents/chat/campus', { method: 'POST', headers, body: JSON.stringify({ text: '权限变化后禁止新执行', model: spec.preset.model, spec: spec.name, conversationId: started.conversationId, messageId: randomUUID(), clientRequestId: randomUUID(), parentMessageId: started.versionId }) }); assert.equal(denied.status, 403);
         assert.equal(get('SELECT count(*) count FROM usage_logs WHERE conversation_id=?', started.conversationId).count, 1);
       } finally { run('UPDATE agents SET published=1 WHERE id=?', 'demo-campus'); run('UPDATE groups SET agent_ids=? WHERE id=?', memberAccess, 'member'); }
     }

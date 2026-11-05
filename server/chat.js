@@ -194,17 +194,16 @@ async function invoke(req, res, conversation, message, kind) {
       if (ctx.stopRequested) return;
       if (event.type === 'delta' || event.type === 'replace') {
         if (typeof event.text !== 'string') return;
-        const current = get('SELECT content FROM answer_versions WHERE id=? AND status=?', versionId, 'running');
-        if (!current) return;
+        const updated = run(event.type === 'replace' ? 'UPDATE answer_versions SET content=? WHERE id=? AND status=?' : 'UPDATE answer_versions SET content=content||? WHERE id=? AND status=?', event.text, versionId, 'running');
+        if (!updated.changes) return;
         if (!ctx.firstAnswer && event.text) { ctx.firstAnswer = true; run('UPDATE usage_logs SET first_answer_ms=? WHERE id=?', now() - startedAt, invocationId); }
-        run('UPDATE answer_versions SET content=? WHERE id=? AND status=?', event.type === 'replace' ? event.text : current.content + event.text, versionId, 'running');
         send(res, { type: event.type, text: event.text });
-      } else if (event.type === 'progress') send(res, { type: 'progress', message: event.message });
+      } else if (event.type === 'progress') send(res, { type: 'progress', phase: event.phase, message: event.message });
     } });
     ctx.remoteTerminal = outcome.status;
     if (!ctx.stopRequested) {
       finish(ctx, outcome.status, outcome.status === 'stopped' ? { cancellationState: 'confirmed', message: '上游报告任务已停止。' } : {});
-      const capabilities = { ...integration.capabilities, connection: { state: outcome.mode === 'demo' ? 'development_demo' : 'observed', at: now() }, output: { state: outcome.mode, at: now(), answerDeltas: outcome.answerDeltas }, multiTurn: { state: 'unverified', strategy: ['workflow','tool'].includes(integration.config.mode) ? (integration.config.historyField?'explicit-history-input':'single-turn-only') : 'fresh-conversation-active-history', at: now() }, cancellation: integration.platform==='polymas'?{state:'local_only'}:integration.capabilities.cancellation || { state: 'unverified' } };
+      const capabilities = { ...integration.capabilities, connection: { state: outcome.mode === 'demo' ? 'development_demo' : 'observed', at: now() }, output: { state: outcome.mode, at: now(), answerDeltas: outcome.answerDeltas }, multiTurn: { state: 'unverified', strategy: ['workflow','tool'].includes(integration.config.mode) ? (integration.config.historyMode==='question'?'active-history-in-question':integration.config.historyMode==='none'?'single-turn-only':integration.config.historyField?'explicit-history-input':'single-turn-only') : 'fresh-conversation-active-history', at: now() }, cancellation: integration.platform==='polymas'?{state:'local_only'}:integration.capabilities.cancellation || { state: 'unverified' } };
       run('UPDATE integrations SET capabilities=? WHERE id=?', JSON.stringify(capabilities), integration.id);
     }
   } catch (error) {
@@ -420,7 +419,7 @@ chatRouter.post('/admin/integrations/:id/test', requirePermission('integrations'
     const result = await adapter.run({ content: text(req.body.prompt || '请简短回复接口测试。', 2000, '测试问题'), history: [], upstreamUser, signal: AbortSignal.timeout(30000), onEvent: event => {
       if (event.type === 'dispatch') { recordDispatch(invocationId, event); return; }
       if (event.type === 'meta') { meta = { ...meta, ...event }; run('UPDATE usage_logs SET upstream_task_id=?,upstream_run_id=?,upstream_conversation_id=?,upstream_message_id=? WHERE id=?', meta.taskId || null, meta.runId || null, meta.conversationId || null, meta.messageId || null, invocationId); }
-      if (event.type === 'delta') { deltaCount++; if (!answerSeen && event.text) { answerSeen = true; run('UPDATE usage_logs SET first_answer_ms=? WHERE id=?', now() - stamp, invocationId); } }
+      if (event.type === 'delta' || event.type === 'replace') { deltaCount++; if (!answerSeen && event.text) { answerSeen = true; run('UPDATE usage_logs SET first_answer_ms=? WHERE id=?', now() - stamp, invocationId); } }
     } });
     const capabilities = { connection: { state: result.mode === 'demo' ? 'development_demo' : result.status === 'completed' ? 'observed' : 'failed', at: now() }, output: { state: result.mode, answerDeltas: result.answerDeltas || 0, at: now() }, multiTurn: { state: 'unverified' }, cancellation: { state: raw.platform==='polymas'?'local_only':'unverified' }, branchRestore: { state: 'unverified', strategy: ['workflow','tool'].includes(integration.config.mode)?(integration.config.historyMode==='question'?'active-history-in-question':integration.config.historyMode==='none'?'single-turn-only':integration.config.historyField?'explicit-history-input':'single-turn-only'):'fresh-conversation-active-history' } };
     run('UPDATE integrations SET capabilities=? WHERE id=?', JSON.stringify(capabilities), raw.id);

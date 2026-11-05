@@ -3,6 +3,7 @@ import { useSetAtom } from 'jotai';
 import { useQueryClient } from '@tanstack/react-query';
 import { getStreamStartFailureText } from '@librechat/chat';
 import { useUsageHandler, showStopButtonByIndex } from '@librechat/chat/react';
+import { ContentTypes } from 'librechat-data-provider';
 import type { ResumableRun, ResumableEvents, ResumableUsage } from '@librechat/chat';
 import type { EventSubmission } from 'librechat-data-provider';
 import type { EventHandlerParams } from './useEventHandlers';
@@ -11,6 +12,7 @@ import { countTrailingOutputChars, markStreamStartFailedMetadata } from '~/utils
 import { reopenTermsOnRefusal } from '~/utils/terms';
 import useEventHandlers from './useEventHandlers';
 import useLocalize from '~/hooks/useLocalize';
+import { readSchoolProgress, updateSchoolProgress } from '~/components/School/progress';
 
 const getStreamStartFailureData = (errorData?: unknown, termsRefusalText?: string): TResData =>
   ({
@@ -40,6 +42,7 @@ export default function useResumableEvents({
   const queryClient = useQueryClient();
   const [_completed, setCompleted] = useState(new Set());
   const setShowStopButton = useSetAtom(showStopButtonByIndex(runIndex));
+  const setSchoolProgress = useSetAtom(updateSchoolProgress);
   const { setMessages, getMessages, setConversation, setIsSubmitting, newConversation } =
     chatHelpers;
 
@@ -83,6 +86,16 @@ export default function useResumableEvents({
    */
   const stepHandler = useCallback(
     (...[event, submission]: Parameters<typeof rawStepHandler>) => {
+      if (
+        submission.initialResponse.endpoint === 'campus' &&
+        event.event === 'on_agent_update' &&
+        'campusProgress' in event.data
+      ) {
+        const progress = readSchoolProgress(event);
+        if (progress && progress.messageId === submission.initialResponse.messageId)
+          setSchoolProgress(progress);
+        return;
+      }
       const eventSubmission = run.editPrefixCleared
         ? ({ ...submission, editPrefixCleared: true } as EventSubmission)
         : submission;
@@ -91,7 +104,7 @@ export default function useResumableEvents({
         run.editPrefixFirstPartFolded = true;
       }
     },
-    [rawStepHandler, run],
+    [rawStepHandler, run, setSchoolProgress],
   );
 
   const {
@@ -110,6 +123,7 @@ export default function useResumableEvents({
     () => ({
       stepHandler,
       showStartFailure: (failedSubmission, errorData, reason) => {
+        setSchoolProgress({ messageId: failedSubmission.initialResponse?.messageId });
         let text: string | undefined;
         if (reason === 'recovery_held') {
           text = localize('com_ui_steer_recovery_held');
@@ -121,28 +135,49 @@ export default function useResumableEvents({
           submission: failedSubmission as EventSubmission,
         });
       },
-      finalHandler: (data, finalSubmission) => finalHandler(data as TFinalResData, finalSubmission),
+      finalHandler: (data, finalSubmission) => {
+        const final = data as TFinalResData;
+        setSchoolProgress({
+          messageId: final.responseMessage?.messageId || finalSubmission.initialResponse.messageId,
+        });
+        return finalHandler(final, finalSubmission);
+      },
       createdHandler,
       attachmentHandler,
       titleHandler,
       contentHandler,
-      messageHandler,
+      messageHandler: (text, submission) =>
+        messageHandler(
+          text,
+          submission.initialResponse.endpoint === 'campus'
+            ? {
+                ...submission,
+                initialResponse: {
+                  ...submission.initialResponse,
+                  content: [{ type: ContentTypes.TEXT, text: text ?? '' }],
+                },
+              }
+            : submission,
+        ),
       prunePtcTraces,
       resetContentHandler,
       syncStepMessage,
       clearStepMaps,
       flushPendingDeltas,
       resetLive,
-      showError: (text, errorSubmission) =>
+      showError: (text, errorSubmission) => {
+        setSchoolProgress({ messageId: errorSubmission.initialResponse?.messageId });
         errorHandler({
           data: { text } as unknown as Parameters<typeof errorHandler>[0]['data'],
           submission: errorSubmission as EventSubmission,
-        }),
+        });
+      },
     }),
     [
       localize,
       queryClient,
       stepHandler,
+      setSchoolProgress,
       finalHandler,
       errorHandler,
       createdHandler,

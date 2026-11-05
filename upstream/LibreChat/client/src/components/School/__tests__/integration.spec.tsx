@@ -198,6 +198,9 @@ test('tool history choices support question context and restore a valid separate
   });
   expect(screen.queryByRole('combobox', { name: key('historyField') })).not.toBeInTheDocument();
   expect(screen.getByText(key('historyInQuestionHint'))).toBeInTheDocument();
+  fireEvent.change(screen.getByRole('combobox', { name: key('toolTextMode') }), {
+    target: { value: 'delta' },
+  });
   fireEvent.submit(document.getElementById('school-integration-editor')!);
   await waitFor(() => expect(schoolRequest).toHaveBeenCalledTimes(1));
   expect(schoolRequest).toHaveBeenCalledWith(
@@ -209,6 +212,7 @@ test('tool history choices support question context and restore a valid separate
         historyField: 'history',
         queryField: 'question',
         answerField: 'text',
+        toolTextMode: 'delta',
       }),
     }),
   );

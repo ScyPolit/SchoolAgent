@@ -5,6 +5,7 @@ COPY package.json package-lock.json ./
 COPY scripts ./scripts
 COPY third_party/librechat-latest ./third_party/librechat-latest
 COPY upstream/LibreChat ./upstream/LibreChat
+COPY docs ./docs
 RUN npm run install:client && npm run build
 
 FROM node:24-bookworm-slim AS dependencies

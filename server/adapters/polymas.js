@@ -1,6 +1,7 @@
 import { createCipheriv, createHash } from 'node:crypto';
 import { AdapterError } from './dify.js';
 import { readSSE } from './sse.js';
+import { createTextStream } from './text-stream.js';
 
 // Cache is private to this process and transport. Credentials never appear in cache keys.
 const caches = new WeakMap();
@@ -103,6 +104,8 @@ export function createPolymasAdapter(integration, fetcher = fetch) {
   const config = integration.config || {}, secret = integration.secret || {}, base = endpoint(integration);
   if (!secret.gatewayAppId || !secret.appKey) throw fail('POLYMAS_CREDENTIALS_REQUIRED', '请录入 Polymas 网关 appId 和 appKey；它们与智能体 appCode 分开配置。', 409);
   if (config.authHeader && !['raw', 'bearer'].includes(config.authHeader)) throw fail('POLYMAS_AUTH_INVALID', '请选择网关 Authorization 格式。', 409);
+  if (config.toolTextMode && !['final', 'delta', 'snapshot'].includes(config.toolTextMode)) throw fail('POLYMAS_STREAM_MODE_INVALID', '请选择工作流的正文展示方式。', 409);
+  if (config.mode === 'tool' && ['delta', 'snapshot'].includes(config.toolTextMode) && (config.answerField !== 'text' || config.responseMode === 'blocking')) throw fail('POLYMAS_STREAM_MODE_INVALID', '实时正文需要 SSE 响应和 text 主答案字段。', 409);
   let cache = caches.get(fetcher);
   if (!cache) { cache = new Map(); caches.set(fetcher, cache); }
   const cacheKey = createHash('sha256').update(JSON.stringify([base, secret.gatewayAppId, secret.appKey])).digest('hex');
@@ -130,20 +133,30 @@ export function createPolymasAdapter(integration, fetcher = fetch) {
     async run({ content, history, upstreamUser, signal, onEvent }) {
       const request = buildPolymasRequest({ integration, content, history, upstreamUser });
       signal?.throwIfAborted();
+      onEvent({ type: 'progress', phase: 'connecting' });
       const accessToken = await token();
       signal?.throwIfAborted();
       onEvent({ type: 'dispatch', mode: 'upstream' });
-      let answerDeltas = 0;
+      onEvent({ type: 'progress', phase: 'processing' });
+      const stream = createTextStream(onEvent);
+      let streamingStarted = false;
       const meta = {};
       const track = context => {
-        if (context?.sessionNid) meta.conversationId = String(context.sessionNid);
-        if (context?.chatNid) meta.messageId = String(context.chatNid);
-        if (Object.keys(meta).length) onEvent({ type: 'meta', ...meta });
+        let changed = false;
+        if (context?.sessionNid && String(context.sessionNid) !== meta.conversationId) { meta.conversationId = String(context.sessionNid); changed = true; }
+        if (context?.chatNid && String(context.chatNid) !== meta.messageId) { meta.messageId = String(context.chatNid); changed = true; }
+        if (changed) onEvent({ type: 'meta', ...meta });
+      };
+      const partial = (text, mode) => {
+        if (typeof text !== 'string' || !text || signal?.aborted) return;
+        if (!streamingStarted) { streamingStarted = true; onEvent({ type: 'progress', phase: 'generating' }); }
+        stream.push(text, mode);
       };
       const finalAnswer = value => {
         if (typeof value !== 'string' || !value.trim()) throw fail('ANSWER_MAPPING', 'Polymas 已结束，但主答案没有返回非空文本；请核对答案字段映射。');
-        onEvent({ type: answerDeltas ? 'replace' : 'delta', text: value, complete: true });
-        return { status: 'completed', ...meta, answerDeltas, mode: answerDeltas ? 'incremental' : 'complete' };
+        stream.flush();
+        if (!stream.count || stream.text !== value) onEvent({ type: stream.count ? 'replace' : 'delta', text: value, complete: true });
+        return { status: 'completed', ...meta, answerDeltas: stream.count, mode: stream.count ? 'incremental' : 'complete' };
       };
       const toolAnswer = value => {
         // Advanced assistant workflows can return the final public text directly.
@@ -163,7 +176,6 @@ export function createPolymasAdapter(integration, fetcher = fetch) {
           await json(response);
           throw fail('UPSTREAM_CONTENT_TYPE', 'Polymas 未返回 SSE，请核对接口类型和响应方式。');
         }
-        onEvent({ type: 'progress', message: 'Polymas 正在生成回答；以接口最终主答案为准。' });
         for await (const frame of readSSE(response.body)) {
           if (frame.data === '[DONE]') continue;
           let event;
@@ -176,9 +188,12 @@ export function createPolymasAdapter(integration, fetcher = fetch) {
             if (event.end === true) return finalAnswer(event.context?.answer);
             // Opt in only after verifying the published app's message semantics.
             if (event.messageType === 'TEXT' && typeof event.message === 'string' && event.message && ['delta', 'snapshot'].includes(config.textMode)) {
-              answerDeltas++;
-              onEvent({ type: config.textMode === 'snapshot' ? 'replace' : 'delta', text: event.message });
+              partial(event.message, config.textMode);
             }
+          } else if (frame.event === 'ANSWER' && ['delta', 'snapshot'].includes(config.toolTextMode)) {
+            // Opt-in: the documented ANSWER.text is the public output of the final streaming model.
+            // Never forward event.data, node traces, metadata, or reasoning fields.
+            if (!event.event?.eventType || event.event.eventType === 'LLM') partial(event.text, config.toolTextMode);
           } else if (frame.event === 'OUT_COMPLETE') {
             let value = event.text;
             try {
@@ -192,13 +207,15 @@ export function createPolymasAdapter(integration, fetcher = fetch) {
             }
             return toolAnswer(value);
           }
-          // ANSWER and node outputs may contain internal reasoning; never render them.
+          // Other node events and reasoning fields never become answer text.
         }
         throw fail('UPSTREAM_INCOMPLETE', 'Polymas 连接已结束，但未收到正式完成事件；本次结果未确认。');
       } catch (error) {
         if (error.code === 'POLYMAS_40001' || error.code === 'UPSTREAM_HTTP_401') cache.delete(cacheKey);
         // Never retry a business POST: it may already have executed upstream.
         throw error;
+      } finally {
+        stream.close();
       }
     },
     async stop() { return { state: 'local_only', message: '已停止本地接收；Polymas 正式文档未提供远程停止接口，上游可能继续执行。' }; },

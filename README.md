@@ -206,6 +206,7 @@ SchoolAgent/
 | 安装、学校网络与运维 | [部署手册](docs/deployment.md) |
 | 身份、数据和模块设计 | [架构说明](docs/architecture.md) |
 | Dify 配置与多轮策略 | [工作流适配](docs/chat-adapters.md) |
+| Polymas 同类智能体上架 | [逐步操作教程](docs/polymas-onboarding.md)，管理端“平台接入”旁可直接阅读和下载 |
 | 原版源码与二次开发边界 | [LibreChat 基线](docs/librechat-latest.md) |
 | 已验证内容及性能数据 | [测试报告](docs/test-report.md) |
 | 尚未完成与运行边界 | [已知限制](docs/known-issues.md) |

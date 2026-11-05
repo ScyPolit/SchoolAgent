@@ -84,11 +84,11 @@
     },
     {
       "path": "client/src/components/School/Admin.tsx",
-      "sha256": "c9a5002bc873cc416fc4d3f99306309df8d7e4898846be7bfa899ac8de9b1482"
+      "sha256": "db0e0b3febe86b64f300e5af9c66eade2920c444301e91c7f748d1a2734c4791"
     },
     {
       "path": "client/src/components/School/Answer.tsx",
-      "sha256": "c6d418d08a472f68e38dfb02f6f099b3e78df566a936289d010e451f84af5ad8"
+      "sha256": "844829c2cb6fc270f078f2f055eb6173646fff951e7f4c5d4ce9f2fb74429485"
     },
     {
       "path": "client/src/components/School/ContentEditor.tsx",
@@ -100,7 +100,11 @@
     },
     {
       "path": "client/src/components/School/IntegrationEditor.tsx",
-      "sha256": "7db1accf0c799e046dc5ebcb73cd4db5050f9e5855f38984dc7e139b6c71d4e4"
+      "sha256": "33607e29da1528f3b703fb998baae8beb35ee3d98c5249a69b03ec7d54026d8a"
+    },
+    {
+      "path": "client/src/components/School/IntegrationGuide.tsx",
+      "sha256": "cdb1ae108bd850fb6a913f035c46909dcfc4fdd6f49152e23eac9a00bfc74c89"
     },
     {
       "path": "client/src/components/School/Migration.tsx",
@@ -120,7 +124,11 @@
     },
     {
       "path": "client/src/components/School/__tests__/integration.spec.tsx",
-      "sha256": "9cf0275380162d6212fb6823305e91a29f1915d4ebb3c0b118c8498a9d59a37b"
+      "sha256": "06576a9c15972b315309b2a7f2e3eab3d8307177ef4199feaf2ddcfe8549a66c"
+    },
+    {
+      "path": "client/src/components/School/__tests__/progress.spec.tsx",
+      "sha256": "37d50a526f2230d82259ed8e5636d0b38d7d5d6b73de3c5fdbf3cec7d6c3b85b"
     },
     {
       "path": "client/src/components/School/api.ts",
@@ -129,6 +137,10 @@
     {
       "path": "client/src/components/School/branch.ts",
       "sha256": "29712f67b9fb39ec5ac5008824335fb7f7af861c06d64ad61b2ff9757ba317b9"
+    },
+    {
+      "path": "client/src/components/School/progress.ts",
+      "sha256": "b4d75912c70cc6abb7c5dfac6197ea387a741098f14f0165c029598712edf765"
     },
     {
       "path": "client/src/components/Share/ShareView.spec.tsx",
@@ -159,6 +171,14 @@
       "sha256": "b443ca3da3bdbdeb3c08cbda02bdbf6c1a6b32999aef3e3475e8c6a3c927d10f"
     },
     {
+      "path": "client/src/hooks/SSE/__tests__/useResumableSSE.spec.ts",
+      "sha256": "42a4c3313ce4df9259d04c5c9fda493bdf29f17698f5cfa1febd2b76bee1f68e"
+    },
+    {
+      "path": "client/src/hooks/SSE/events.ts",
+      "sha256": "cc5e7ada8cef7054ab434135fd2e95d0b7ba7c6f1e743b994b0220f3b96f7383"
+    },
+    {
       "path": "client/src/hooks/Sharing/__tests__/useChatOptions.spec.tsx",
       "sha256": "68d06dba4126573e0fe7c54484702cc90afe64fd2abf7c415c0b02b93ec29cae"
     },
@@ -168,7 +188,7 @@
     },
     {
       "path": "client/src/locales/en/translation.json",
-      "sha256": "0d9e48271fb852c144eb497456be1e489600cba42dfa6c3b9af95ce4141e4f78"
+      "sha256": "da8d20765c0a5eb06c28b1706d984d4eaa805bac11a7afffae3f89a0398f6c6a"
     },
     {
       "path": "client/src/locales/i18n.ts",
@@ -176,7 +196,7 @@
     },
     {
       "path": "client/src/locales/zh-Hans/translation.json",
-      "sha256": "42c87d10b61b66014ae2d7bfc26f218da8f58f4b22907e82e111f31b79584510"
+      "sha256": "355a95f6a82efa11cec956302976e5b40e5daf25eff717a2a84aa37710a3dc7a"
     },
     {
       "path": "client/src/routes/Layouts/Login.tsx",
