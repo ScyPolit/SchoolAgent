@@ -18,7 +18,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends chromium fonts-
     && groupadd --gid 10001 schoolagent && useradd --uid 10001 --gid schoolagent --create-home schoolagent
 WORKDIR /app
 ENV NODE_ENV=production PORT=3000 DATABASE_PATH=/app/data/school-agent.sqlite \
-    PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
+    PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium \
+    XDG_CONFIG_HOME=/tmp/schoolagent-chromium/config \
+    XDG_CACHE_HOME=/tmp/schoolagent-chromium/cache
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY --from=frontend /app/dist ./dist
 COPY package.json ./
