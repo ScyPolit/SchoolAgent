@@ -1,6 +1,6 @@
 # 测试与交付报告
 
-日期：2026-11-05，Asia/Shanghai。当前范围是本机非 Docker 验证；用户明确要求不执行 Docker 部署。真实 Polymas、校内 Dify、学校 SMTP、VPN/HTTPS 与微信真机不在本次已通过范围内。
+日期：2026-11-05，Asia/Shanghai。开发轮完成本机非 Docker 验证；用户随后授权更新既有 Docker 服务，该单机增量更新及检查已完成，见 [Docker 更新记录](docker-update.md)。真实 Polymas、校内 Dify、学校 SMTP、VPN/HTTPS 与微信真机不在已通过范围内。
 
 ## 2026-11-05：Polymas 与选择式后台
 
@@ -113,7 +113,7 @@ data-provider 类型检查已通过。最新客户端完整类型检查退出码
 
 ## 部署与正式接入边界
 
-- Dockerfile、Compose、私有入口、HTTPS/SSE、日志脱敏、管理员初始化、备份恢复及清理策略已提供；**未执行 Docker 构建或部署**。
+- Dockerfile、Compose、私有入口、HTTPS/SSE、日志脱敏、管理员初始化、备份恢复及清理策略已提供；既有 Docker 增量镜像更新、健康状态、数据保持及只读容器 PDF/PNG 检查已通过。完整 Dockerfile 从零构建未完成验收，详见 [更新记录](docker-update.md)。
 - 已按用户要求检索公开文档，记录见 [public-api-research.md](public-api-research.md)。Dify 官方协议已有契约测试；校内实例地址/版本/变量仍未知。
 - Polymas 正式协议已读取并实现，真实学校网关授权、AES 密钥编码、应用映射与业务样例仍待联调；文档没有远程停止接口，只能本地停止。
 - 正式 SMTP、真实微信、学校 VPN/HTTPS 和两个真实发布应用的业务验证仍需实际环境。

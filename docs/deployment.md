@@ -1,6 +1,6 @@
 # 部署与运维
 
-本手册涵盖 Docker、学校 HTTPS / VPN 入口、本地开发及备份恢复。Docker 配置尚未完成环境实测；项目概览和本地演示见 [README](../README.md)。
+本手册涵盖 Docker、学校 HTTPS / VPN 入口、本地开发及备份恢复。2026-11-05 已完成既有单机 Docker 服务的增量更新及检查，见 [更新记录](docker-update.md)；从零构建和学校完整环境仍待验收。项目概览和本地演示见 [README](../README.md)。
 
 ## Docker 启动
 
