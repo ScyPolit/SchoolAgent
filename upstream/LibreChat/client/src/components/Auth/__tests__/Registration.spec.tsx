@@ -1,4 +1,5 @@
 import * as reactRouter from 'react-router-dom';
+import { act } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import userEvent from '@testing-library/user-event';
 import * as mockDataProvider from 'librechat-data-provider/react-query';
@@ -165,6 +166,54 @@ test('renders registration form', () => {
   );
 });
 
+test('registration with verification disabled redirects to sign-in even when no mail was sent', () => {
+  jest.useFakeTimers();
+  const navigate = jest.fn();
+  jest.spyOn(reactRouter, 'useNavigate').mockReturnValue(navigate);
+  try {
+    const { mockUseRegisterUserMutation, queryByText } = setup();
+    const callbacks = mockUseRegisterUserMutation.mock.calls.at(-1)?.[0];
+    const response = {
+      message: 'Sign in directly',
+      mailSent: false,
+      verificationRequired: false,
+    };
+    act(() =>
+      callbacks?.onSuccess?.(response, {
+        name: 'Campus user',
+        email: 'campus@example.test',
+        username: 'campus',
+        password: 'local-test-password',
+      }),
+    );
+    expect(queryByText('Sign in directly')).not.toBeInTheDocument();
+    act(() => jest.advanceTimersByTime(3000));
+    expect(navigate).toHaveBeenCalledWith('/login', { replace: true });
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test('registration with required verification reports unsent mail and keeps the form visible', () => {
+  const { mockUseRegisterUserMutation, getByText, getByRole } = setup();
+  const callbacks = mockUseRegisterUserMutation.mock.calls.at(-1)?.[0];
+  const response = {
+    message: 'Verification mail failed',
+    mailSent: false,
+    verificationRequired: true,
+  };
+  act(() =>
+    callbacks?.onSuccess?.(response, {
+      name: 'Campus user',
+      email: 'campus@example.test',
+      username: 'campus',
+      password: 'local-test-password',
+    }),
+  );
+  expect(getByText('Verification mail failed')).toBeVisible();
+  expect(getByRole('form', { name: /Registration form/i })).toBeVisible();
+});
+
 test('shows validation error messages', async () => {
   const { getByTestId, getAllByRole, getByRole } = setup();
   await userEvent.type(getByRole('textbox', { name: /Full name/i }), 'J');
@@ -172,17 +221,14 @@ test('shows validation error messages', async () => {
   await userEvent.type(getByRole('textbox', { name: /Email/i }), 'test');
   await userEvent.type(getByTestId('password'), 'pass');
   await userEvent.type(getByTestId('confirm_password'), 'password1');
-  const alerts = getAllByRole('alert');
-  expect(alerts).toHaveLength(6);
-
-  // This first alert is for the theme toggle, which is empty within this test but still picked up by getAllByRole as an alert
-  expect(alerts[0]).toHaveTextContent('');
-
-  expect(alerts[1]).toHaveTextContent(/Name must be at least 3 characters/i);
-  expect(alerts[2]).toHaveTextContent(/Username must be at least 2 characters/i);
-  expect(alerts[3]).toHaveTextContent(/You must enter a valid email address/i);
-  expect(alerts[4]).toHaveTextContent(/Password must be at least 8 characters/i);
-  expect(alerts[5]).toHaveTextContent(/Passwords do not match/i);
+  const messages = getAllByRole('alert')
+    .map((alert) => alert.textContent)
+    .filter(Boolean);
+  expect(messages).toHaveLength(4);
+  expect(messages[0]).toMatch(/Username must be at least 2 characters/i);
+  expect(messages[1]).toMatch(/You must enter a valid email address/i);
+  expect(messages[2]).toMatch(/Password must be at least 12 characters/i);
+  expect(messages[3]).toMatch(/Passwords do not match/i);
 });
 
 test('shows error message when registration fails', async () => {

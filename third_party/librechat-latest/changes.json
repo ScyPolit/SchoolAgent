@@ -7,8 +7,20 @@
       "sha256": "24c73960c6f54bdc3b10ce4cdbd61c9376626832760c076c14065689a276785a"
     },
     {
+      "path": "client/src/components/Agents/AgentGrid.tsx",
+      "sha256": "5f3fffdd9921e64696ae3f4e27a7520f9b95fbdc5fd650de90a5687cc1d0b193"
+    },
+    {
       "path": "client/src/components/Agents/Marketplace.tsx",
-      "sha256": "1f7a4ce001bc4c91959867ec5552515b4e5b6636d5f6a89186469e17353ea05f"
+      "sha256": "28ad6ac9b1e3166935120475494150368c6cbf485e92724600932cf42ad10a3f"
+    },
+    {
+      "path": "client/src/components/Agents/VirtualizedAgentGrid.tsx",
+      "sha256": "9df338b6f79921a4446beccfa7f5a2f26a2d35ee0c4c75a75c00d5f284a4a786"
+    },
+    {
+      "path": "client/src/components/Agents/tests/Marketplace.spec.tsx",
+      "sha256": "5ee1f5e3b19dc68352061d47d085ff65e5bff5e7f59ea353b422c2995d0c7021"
     },
     {
       "path": "client/src/components/Auth/Login.tsx",
@@ -20,7 +32,7 @@
     },
     {
       "path": "client/src/components/Auth/Registration.tsx",
-      "sha256": "f11d1c7af8bd9e8dc60200d857f913947432f1ecbd9ffe38670a87e25fc83c33"
+      "sha256": "a7c7e5972a829719538dc36648935cc180b24629be1ea3a57097e7472bf930a8"
     },
     {
       "path": "client/src/components/Auth/RequestPasswordReset.tsx",
@@ -33,6 +45,10 @@
     {
       "path": "client/src/components/Auth/VerifyEmail.tsx",
       "sha256": "750b8e7624e3f2854a8b88d044de27cf5a258df0b2a75923dc58c95e8e3e7867"
+    },
+    {
+      "path": "client/src/components/Auth/__tests__/Registration.spec.tsx",
+      "sha256": "cf92aa8cd5f6f44f86fe91176c37396fe84e47dc9c217cbd6780ad598149158d"
     },
     {
       "path": "client/src/components/Chat/Input/ChatForm.tsx",
@@ -84,7 +100,7 @@
     },
     {
       "path": "client/src/components/School/Admin.tsx",
-      "sha256": "db0e0b3febe86b64f300e5af9c66eade2920c444301e91c7f748d1a2734c4791"
+      "sha256": "75250236981b8891d9c9b2d9dbc15fdf82e47b5002033f69c40922df789507cf"
     },
     {
       "path": "client/src/components/School/Answer.tsx",
@@ -96,7 +112,7 @@
     },
     {
       "path": "client/src/components/School/Home.tsx",
-      "sha256": "a2dd63b7bf1560a92b61831564bdd818f5c65b914cdc91c5897da22793d846a1"
+      "sha256": "3be74d35bae11b70388c46053ff4cdbea4742ea2caa8b5d5d8d5a8b47978ef9e"
     },
     {
       "path": "client/src/components/School/IntegrationEditor.tsx",
@@ -168,7 +184,7 @@
     },
     {
       "path": "client/src/hooks/AuthContext.tsx",
-      "sha256": "b443ca3da3bdbdeb3c08cbda02bdbf6c1a6b32999aef3e3475e8c6a3c927d10f"
+      "sha256": "7b1666cc135940f55563281babdc149b1e1c3bdab8c773399a495c759245bd68"
     },
     {
       "path": "client/src/hooks/SSE/__tests__/useResumableSSE.spec.ts",
@@ -187,8 +203,12 @@
       "sha256": "f3770a8a1090d218427b3a3647bfe457e7bab74ec31c46f63e6032fe1c8b4ae2"
     },
     {
+      "path": "client/src/hooks/__tests__/AuthContext.spec.tsx",
+      "sha256": "08275ef660d6f4745349a73378cd9fe24c12bfee78c05c4a1f6b5bc41e5d01db"
+    },
+    {
       "path": "client/src/locales/en/translation.json",
-      "sha256": "da8d20765c0a5eb06c28b1706d984d4eaa805bac11a7afffae3f89a0398f6c6a"
+      "sha256": "5784d79915daee0b64129d3cebd1b58c81c9e307732bf07b07922714db3a7e50"
     },
     {
       "path": "client/src/locales/i18n.ts",
@@ -196,7 +216,7 @@
     },
     {
       "path": "client/src/locales/zh-Hans/translation.json",
-      "sha256": "355a95f6a82efa11cec956302976e5b40e5daf25eff717a2a84aa37710a3dc7a"
+      "sha256": "32815962bfb8583adb96e6cc3a4a329f7326ed5c89d2d8a9ab83479265484c81"
     },
     {
       "path": "client/src/routes/Layouts/Login.tsx",

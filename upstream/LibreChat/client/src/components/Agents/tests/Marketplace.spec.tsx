@@ -49,6 +49,13 @@ const mockLocalize = jest.fn((key: string, options?: { count?: number; category?
 
 let mockHasAccess = true;
 
+jest.mock('~/hooks/AuthContext', () => ({
+  useAuthContext: () => ({ user: { provider: 'test-account' } }),
+}));
+jest.mock('~/components/School/api', () => ({
+  useSchoolBootstrap: () => ({ data: undefined }),
+}));
+
 jest.mock('~/hooks', () => ({
   useLocalize: () => mockLocalize,
   useDocumentTitle: jest.fn(),

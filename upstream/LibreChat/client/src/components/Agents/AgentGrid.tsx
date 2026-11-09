@@ -436,7 +436,7 @@ const AgentGrid: React.FC<AgentGridProps> = ({
         </div>
       )}
 
-      {!failure && hasData && !hasNextPage && (
+      {!failure && visibleAgents.length > 4 && !hasNextPage && (
         <div className="mt-6 text-center">
           <p className="text-text-secondary text-sm">{localize('com_agents_no_more_results')}</p>
         </div>

@@ -253,7 +253,7 @@ describe('AuthContextProvider two-factor login handoff', () => {
     act(() => {
       capturedAuthContext?.completeAuthentication('auth-token', { id: 'user-1' } as never);
     });
-    expect(mockNavigate).toHaveBeenLastCalledWith('/c/new', { replace: true });
+    expect(mockNavigate).toHaveBeenLastCalledWith('/agents', { replace: true });
   });
 
   it('keeps enrolled users on the existing verification route', () => {
@@ -1305,6 +1305,30 @@ describe('AuthContextProvider: browser setup destination', () => {
     mockApiBaseUrl.mockReturnValue('');
     window.history.replaceState({}, '', '/');
   });
+
+  it.each(['/login', '/register', '/forgot-password', '/reset-password'])(
+    'keeps the %s form and pending destination when the campus guest session refreshes',
+    (path) => {
+      window.history.replaceState({}, '', path);
+      sessionStorage.setItem(SESSION_KEY, destination);
+      const { getByTestId } = renderProviderLive();
+      const options = mockRefreshMutate.mock.calls[0][1] as { onSuccess: (data: unknown) => void };
+      act(() =>
+        options.onSuccess({
+          token: 'school-cookie-session',
+          user: { id: 'guest', role: 'USER', provider: 'school-guest' },
+        }),
+      );
+      act(() => jest.advanceTimersByTime(100));
+      expect(getByTestId('consumer')).toHaveAttribute('data-authenticated', 'true');
+      expect(mockNavigate).not.toHaveBeenCalled();
+      expect(sessionStorage.getItem(SESSION_KEY)).toBe(destination);
+      act(() => mockCapturedLoginOptions.onSuccess(authenticated));
+      act(() => jest.advanceTimersByTime(100));
+      expect(mockNavigate).toHaveBeenLastCalledWith(destination, { replace: true });
+      expect(sessionStorage.getItem(SESSION_KEY)).toBeNull();
+    },
+  );
 
   it('returns password sign-in to the setup without approving it', () => {
     renderProvider();

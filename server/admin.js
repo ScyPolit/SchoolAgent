@@ -9,6 +9,12 @@ const str=z.string().trim().min(1).max(200);
 const strings=z.array(z.string().max(200)).max(1000);
 const bool=z.boolean();
 const email=z.string().trim().email().max(254).transform(v=>v.toLowerCase());
+const smtpFrom=z.string().trim().max(512).refine(value=>{
+ if(!value)return true;
+ if(/[\r\n]/.test(value))return false;
+ const named=value.match(/^[^<>]*<([^<>]+)>$/);
+ return email.safeParse(named?named[1]:value).success;
+},'发件人请填写完整邮箱地址，例如 account@qq.com，或 校园智能体 <account@qq.com>；不能只填写名称');
 function mustExist(table,value){const row=get(`SELECT * FROM ${table} WHERE id=?`,value);if(!row)throw new HttpError(404,'记录不存在','NOT_FOUND');return row;}
 function userGroups(userId){return all('SELECT group_id FROM user_groups WHERE user_id=?',userId).map(v=>v.group_id);}
 function adminUser(user){return {...publicUser(user),active:Boolean(user.active),emailVerified:Boolean(user.email_verified),email_verified:Boolean(user.email_verified),createdAt:user.created_at,groupIds:userGroups(user.id)};}
@@ -132,7 +138,7 @@ adminRouter.delete('/admin/agents/:id',requirePermission('agents'),(req,res)=>{m
 const content=z.union([z.string().max(12000),z.object({title:z.string().max(500).optional(),content:z.string().max(12000).optional(),text:z.string().max(12000).optional(),question:z.string().max(1000).optional(),answer:z.string().max(12000).optional(),description:z.string().max(12000).optional(),label:z.string().max(500).optional(),agentId:z.string().max(200).optional(),image:z.string().max(2000).optional(),url:z.string().max(2000).optional(),href:z.string().max(2000).optional(),groups:strings.optional()})]);
 const homepageSchema=z.object({schoolName:z.string().max(200),platformName:z.string().max(200),logo:z.string().max(2000),themeColor:z.string().regex(/^#[a-fA-F0-9]{6}$/),welcome:z.string().max(500),subtitle:z.string().max(1000),announcements:z.array(content).max(100),banners:z.array(content).max(100),questions:z.array(content).max(100),faq:z.array(content).max(100),help:z.string().max(12000),contact:z.string().max(12000),footer:z.string().max(4000),modules:z.record(z.string(),z.boolean())});
 const retentionSchema=z.object({guestBrowserDays:z.coerce.number().int().min(1).max(36500),guestServerDays:z.coerce.number().int().min(1).max(36500),usageDays:z.coerce.number().int().min(1).max(36500),auditDays:z.coerce.number().int().min(1).max(36500),shareDays:z.coerce.number().int().min(1).max(36500)});
-function settingsView(req){const smtp=setting('smtp');return {homepage:hasPermission(req.user,'homepage')?setting('homepage'):undefined,retention:hasPermission(req.user,'settings')?setting('retention'):undefined,defaults:hasPermission(req.user,'settings')?setting('defaults'):undefined,smtp:hasPermission(req.user,'settings')?{...smtp,password:'',hasPassword:Boolean(smtp.password)}:undefined};}
+function settingsView(req){const smtp=setting('smtp');return {homepage:hasPermission(req.user,'homepage')?setting('homepage'):undefined,registration:hasPermission(req.user,'settings')?setting('registration'):undefined,retention:hasPermission(req.user,'settings')?setting('retention'):undefined,defaults:hasPermission(req.user,'settings')?setting('defaults'):undefined,smtp:hasPermission(req.user,'settings')?{...smtp,password:'',hasPassword:Boolean(smtp.password)}:undefined};}
 adminRouter.get('/admin/settings',(req,res,next)=>{if(!hasPermission(req.user,'settings')&&!hasPermission(req.user,'homepage'))return next(new HttpError(403,'没有设置管理权限'));res.json(settingsView(req));});
 adminRouter.post('/admin/retention/preview',requirePermission('settings'),requirePermission('cleanup'),(req,res)=>{
  const policy=retentionSchema.parse({...setting('retention'),...req.body});const day=86400000;
@@ -142,10 +148,11 @@ adminRouter.post('/admin/retention/preview',requirePermission('settings'),requir
  res.json({guestConversations:conversations,usageLogs:usage,auditLogs:audits,message:'此预览按当前时刻计算。保存缩短规则后，尚存的历史数据同样适用；定时任务每小时执行。'});
 });
 adminRouter.put('/admin/settings/:key',(req,res,next)=>{
- const key=req.params.key;if(!['homepage','retention','defaults','smtp'].includes(key))throw new HttpError(404,'设置项不存在');
+ const key=req.params.key;if(!['homepage','registration','retention','defaults','smtp'].includes(key))throw new HttpError(404,'设置项不存在');
  if(!hasPermission(req.user,key==='homepage'?'homepage':'settings'))throw new HttpError(403,'没有设置管理权限');
  let value;
  if(key==='homepage')value=homepageSchema.parse({...setting(key),...req.body});
+ if(key==='registration')value=z.object({requireEmailVerification:z.boolean()}).parse(req.body);
  if(key==='retention'){
   value=retentionSchema.parse({...setting(key),...req.body});const shortening=Object.entries(value).some(([k,v])=>v<setting(key)[k]);
   if(shortening&&(!hasPermission(req.user,'cleanup')||req.body.confirmShortening!==true))throw new HttpError(400,'缩短保留期限需要清理权限，并确认规则将作用于已有记录','RETENTION_CONFIRMATION_REQUIRED');
@@ -156,7 +163,9 @@ adminRouter.put('/admin/settings/:key',(req,res,next)=>{
  }
  if(key==='smtp'){
   if(!hasPermission(req.user,'credentials'))throw new HttpError(403,'SMTP 维护需要凭据权限');
-  value=z.object({host:z.string().max(254),port:z.coerce.number().int().min(1).max(65535),encryption:z.enum(['starttls','tls','none']),from:z.union([z.literal(''),email]),username:z.string().max(254),password:z.string().max(16000)}).parse({...setting(key),...req.body,password:req.body.password||''});
+  value=z.object({host:z.string().trim().max(254).refine(v=>!/[\s/:]/.test(v),'请填写 SMTP 主机名，不要包含协议、端口或空格'),port:z.coerce.number().int().min(1).max(65535),encryption:z.enum(['starttls','tls','none']),from:smtpFrom,username:z.string().trim().max(254),password:z.string().max(16000)}).parse({...setting(key),...req.body,password:req.body.password||''});
+  if(value.port===465&&value.encryption!=='tls')throw new HttpError(400,'465 端口需要选择 TLS 加密；QQ 邮箱推荐 smtp.qq.com / 465 / TLS','SMTP_CONFIG_INVALID');
+  if(value.port===587&&value.encryption==='tls')throw new HttpError(400,'587 端口需要选择 STARTTLS；如需 TLS 请使用 465 端口','SMTP_CONFIG_INVALID');
   value.password=req.body.clearPassword?'':value.password?encrypt(value.password):setting(key).password;
  }
  setSetting(key,value);audit(req,'admin.settings_updated',key,{fields:Object.keys(req.body).filter(k=>!['password','confirmShortening'].includes(k))});res.json({message:'设置已保存',...settingsView(req)});

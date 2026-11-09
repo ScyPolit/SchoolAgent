@@ -41,6 +41,7 @@ test('native guest shell preserves guest identity and never grants account or ad
  assert.equal(role.permissions.SHARED_LINKS.CREATE, false);
  assert.equal((await request('/convos/new/export', 'GET', undefined, { authorization: 'Bearer school-cookie-session' })).status, 401);
  const config = (await request('/config')).body;
+ assert.equal(config.emailEnabled,false);assert.equal(config.emailLoginEnabled,true);
  assert.equal(config.adminPanelURL, undefined); assert.equal(config.interface.temporaryChat, false);
  assert.equal(config.interface.runCode, false); assert.equal(config.sharedLinksEnabled, false);
  assert.equal(config.minPasswordLength, 12); assert.ok(config.modelSpecs.list.some(spec => spec.name === 'demo-campus'));
@@ -60,6 +61,14 @@ test('native login shares revocable cookie sessions with campus APIs and logout 
  assert.equal((await request('/auth/login', 'POST', { email: 'native-member@example.test', password })).status, 200);
  assert.equal((await request('/auth/logout', 'POST', {})).status, 200);
  assert.equal((await request('/auth/refresh', 'POST')).body.user.provider, 'school-guest');
+});
+
+test('native registration and sign-in work without email delivery when verification is off',async()=>{
+ const request=client();
+ const created=await request('/auth/register','POST',{email:'native-direct@example.test',name:'直接登录',password});
+ assert.equal(created.status,201);assert.equal(created.body.verificationRequired,false);assert.equal(created.body.mailSent,false);
+ const login=await request('/auth/login','POST',{email:'native-direct@example.test',password});
+ assert.equal(login.status,200);assert.equal(login.body.user.provider,'school-account');assert.equal(login.body.user.emailVerified,false);
 });
 
 test('native directory and model selector enforce publication/group access and hide workflow configuration', async () => {
@@ -85,6 +94,8 @@ test('native directory and model selector enforce publication/group access and h
 
 test('native registration reports unsent verification truthfully and native verification/reset aliases consume one-time tokens', async () => {
  const request = client();
+ setSetting('registration',{requireEmailVerification:true});
+ assert.equal((await request('/config')).body.emailEnabled,true);
  setSetting('smtp', { host: '', from: '' });
  const created = await request('/auth/register', 'POST', { email: 'native-new@example.test', name: '原生注册', username: 'ignored', password });
  assert.equal(created.status, 201); assert.equal(created.body.mailSent, false);

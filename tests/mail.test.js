@@ -18,6 +18,7 @@ const origin = `http://127.0.0.1:${server.address().port}`;
 process.env.PUBLIC_URL = origin;
 const smtpSetting = { host:smtp.host,port:smtp.port,encryption:'none',from:'campus@example.test',username:'',password:'' };
 setSetting('smtp',smtpSetting);
+setSetting('registration',{requireEmailVerification:true});
 const password = 'local-smtp-original-password-123';
 const replacement = 'local-smtp-replacement-password-456';
 
@@ -92,9 +93,9 @@ test('SMTP recipient rejection is explicit and does not leave a usable unsent to
   try {
     const request=client(),before=smtp.messages.length;
     const registration=await request('/auth/register','POST',{email:'reject@example.test',name:'拒收测试',password});
-    assert.equal(registration.status,201);assert.equal(registration.body.mailSent,false);assert.equal(registration.body.code,'SMTP_SEND_FAILED');
+    assert.equal(registration.status,201);assert.equal(registration.body.mailSent,false);assert.equal(registration.body.code,'SMTP_RECIPIENT_REJECTED');
     const rejected=get('SELECT id FROM users WHERE email=?','reject@example.test');assert.equal(get('SELECT count(*) count FROM email_tokens WHERE user_id=?',rejected.id).count,0);
-    assert.equal((await request('/auth/forgot-password','POST',{email:'mail-user@example.test'})).body.code,'SMTP_SEND_FAILED');
+    assert.equal((await request('/auth/forgot-password','POST',{email:'mail-user@example.test'})).body.code,'SMTP_RECIPIENT_REJECTED');
     assert.equal(smtp.messages.length,before);
   } finally { smtp.control.rejectRecipients=false; }
 });
@@ -108,7 +109,8 @@ test('encrypted SMTP credentials authenticate real transport; wrong credentials 
     assert.equal(latestLink('verify').envelope.authenticated,true);
     setSetting('smtp',{...smtpSetting,username:'local-sender',password:encrypt('wrong-smtp-password')});
     const result=await request('/auth/resend-verification','POST',{email:'authenticated@example.test'});
-    assert.equal(result.status,502);assert.equal(result.body.code,'SMTP_SEND_FAILED');
+    assert.equal(result.status,502);assert.equal(result.body.code,'SMTP_AUTH_FAILED');
+    assert.match(result.body.error,/授权码/);
     const audits=JSON.stringify(all('SELECT * FROM audit_logs'));
     assert.equal(audits.includes('smtp-fixture-password'),false);assert.equal(audits.includes(password),false);
   } finally {smtp.control.credentials=null;setSetting('smtp',smtpSetting);}
@@ -136,4 +138,51 @@ test('administrator SMTP configuration encrypts credentials, masks responses and
     assert.equal((await request('/admin/settings/smtp','PUT',{...smtpSetting,username:'api-sender',password:''})).status,200);
     assert.equal((await request('/admin/smtp/test','POST',{to:'operator@example.test'})).body.mailSent,true);
   } finally {smtp.control.credentials=null;setSetting('smtp',smtpSetting);}
+});
+
+test('SMTP sender accepts display names, validates before saving and preserves the working configuration on failure',async()=>{
+  const request=client();await request('/auth/login','POST',{email:'mail-admin@example.test',password});
+  try {
+    const saved=await request('/admin/settings/smtp','PUT',{...smtpSetting,host:' 127.0.0.1 ',from:' 校园智能体 <campus@example.test> '});
+    assert.equal(saved.status,200);assert.equal(saved.body.smtp.host,'127.0.0.1');
+    const sent=await request('/admin/smtp/test','POST',{to:'sender-check@example.test'});
+    assert.equal(sent.status,200);assert.equal(smtp.messages.at(-1).from,'<campus@example.test>');
+    for(const from of ['校园智能体','not-an-email','campus@example.test\r\nBcc: other@example.test']){
+      const rejected=await request('/admin/settings/smtp','PUT',{...smtpSetting,from});
+      assert.equal(rejected.status,400);assert.match(rejected.body.error,/发件人请填写完整邮箱地址/);
+      assert.equal((await request('/admin/settings')).body.smtp.from,'校园智能体 <campus@example.test>');
+    }
+    for(const [port,encryption] of [[465,'starttls'],[465,'none'],[587,'tls']]){
+      const rejected=await request('/admin/settings/smtp','PUT',{...smtpSetting,port,encryption});
+      assert.equal(rejected.status,400);assert.equal(rejected.body.code,'SMTP_CONFIG_INVALID');
+    }
+    const qq=await request('/admin/settings/smtp','PUT',{...smtpSetting,host:'smtp.qq.com',port:465,encryption:'tls',from:'校园智能体 <account@qq.com>',username:' account@qq.com '});
+    assert.equal(qq.status,200);assert.equal(qq.body.smtp.username,'account@qq.com');
+    const {smtpTransport}=await import('../server/mail.js');
+    const {transport}=smtpTransport();assert.equal(transport.options.secure,true);assert.equal(transport.options.tls.rejectUnauthorized,true);
+  } finally {setSetting('smtp',smtpSetting);}
+});
+
+test('administrators can toggle verification without sending mail, and password reset still sends when verification is off',async()=>{
+  const request=client();await request('/auth/login','POST',{email:'mail-admin@example.test',password});
+  try {
+    const disabled=await request('/admin/settings/registration','PUT',{requireEmailVerification:false});
+    assert.equal(disabled.status,200);assert.equal(disabled.body.registration.requireEmailVerification,false);
+    assert.equal((await request('/admin/settings/registration','PUT',{requireEmailVerification:'false'})).status,400);
+    const before=smtp.messages.length;
+    const created=await request('/librechat/auth/register','POST',{email:'verification-off@example.test',name:'免验证注册',password});
+    assert.equal(created.status,201);assert.equal(created.body.verificationRequired,false);assert.equal(smtp.messages.length,before);
+    assert.equal((await request('/librechat/auth/login','POST',{email:'verification-off@example.test',password})).status,200);
+    assert.equal((await request('/auth/forgot-password','POST',{email:'verification-off@example.test'})).body.mailSent,true);
+    assert.equal(latestLink('reset').envelope.to[0],'<verification-off@example.test>');
+  } finally {setSetting('registration',{requireEmailVerification:true});}
+});
+
+test('SMTP content rejection is identified without returning raw service responses',async()=>{
+  smtp.control.rejectData=true;
+  try {
+    const result=await client()('/auth/forgot-password','POST',{email:'mail-user@example.test'});
+    assert.equal(result.status,502);assert.equal(result.body.code,'SMTP_MESSAGE_REJECTED');
+    assert.equal(JSON.stringify(result.body).includes('Test-only delivery rejection'),false);
+  } finally {smtp.control.rejectData=false;}
 });

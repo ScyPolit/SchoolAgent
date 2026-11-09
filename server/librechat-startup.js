@@ -12,7 +12,7 @@ export function librechatUser(req, user = req.user) {
   id: account?.id || req.guestId, username: account?.name || '游客',
   name: account?.name || '游客', email: account?.email || '', avatar: '',
   role: account && account.role !== 'user' ? 'ADMIN' : 'USER',
-  provider: account ? 'school-account' : 'school-guest', emailVerified: Boolean(account),
+  provider: account ? 'school-account' : 'school-guest', emailVerified: Boolean(user?.email_verified),
   createdAt: new Date(user?.created_at || now()).toISOString(), updatedAt: new Date().toISOString(),
   schoolRole: account?.role || 'guest', schoolPermissions: account?.permissions || [],
   school: { guest: !account, role: account?.role || 'guest', permissions: account?.permissions || [], guestMigrationCount: account ? guestConversationCount(req.guestId) : 0 },
@@ -28,7 +28,7 @@ export function librechatStartup(req) {
  return {
   appTitle: homepage.platformName, serverDomain: process.env.PUBLIC_URL || 'http://localhost:3000',
   socialLogins: [], emailLoginEnabled: true, registrationEnabled: true, passwordResetEnabled: true,
-  emailEnabled: true, socialLoginEnabled: false, allowAccountDeletion: false, allowEmailChange: false,
+  emailEnabled: setting('registration').requireEmailVerification===true, socialLoginEnabled: false, allowAccountDeletion: false, allowEmailChange: false,
   discordLoginEnabled: false, facebookLoginEnabled: false, githubLoginEnabled: false,
   googleLoginEnabled: false, openidLoginEnabled: false, appleLoginEnabled: false,
   samlLoginEnabled: false, passkeyLoginEnabled: false, twoFactorAuthenticationRequired: false,

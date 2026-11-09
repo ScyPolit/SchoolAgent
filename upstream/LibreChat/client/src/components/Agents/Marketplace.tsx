@@ -155,34 +155,38 @@ const AgentMarketplace: React.FC<AgentMarketplaceProps> = ({ className = '' }) =
           <h1 id="marketplace-heading" className="sr-only">
             {localize('com_agents_marketplace')}
           </h1>
-          <div className="border-border-light shrink-0 border-b">
-            <div className="flex items-center gap-2 p-3">
-              {isSmallScreen && <OpenSidebar className="size-9 shrink-0 rounded-lg" />}
-              <SearchBar value={searchQuery} onSearch={handleSearch} className="min-w-0 flex-1" />
-              {!schoolMode && <MarketplaceAdminSettings />}
-            </div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 pb-3">
-              {showCategories && (
-                <div className="min-w-0 flex-1 basis-full lg:basis-0">
-                  <CategoryTabs
-                    categories={categories}
-                    activeTab={activeCategory}
-                    isLoading={categoriesQuery.isLoading}
-                    onChange={handleTabChange}
-                  />
-                </div>
-              )}
-              <div className="ms-auto flex shrink-0 items-center gap-1.5">
-                {!schoolMode && (
-                  <MineFilterToggle checked={mine === 1} onCheckedChange={handleMineChange} />
+          <div className="border-border-light shrink-0 scrollbar-gutter-stable overflow-y-auto border-b">
+            <div className={schoolMode ? 'mx-auto w-full max-w-5xl px-3 sm:px-6' : undefined}>
+              <div className={`flex items-center gap-2 ${schoolMode ? 'py-3' : 'p-3'}`}>
+                {isSmallScreen && <OpenSidebar className="size-9 shrink-0 rounded-lg" />}
+                <SearchBar value={searchQuery} onSearch={handleSearch} className="min-w-0 flex-1" />
+                {!schoolMode && <MarketplaceAdminSettings />}
+              </div>
+              <div
+                className={`flex flex-wrap items-center gap-x-3 gap-y-2 pb-3 ${schoolMode ? '' : 'px-3'}`}
+              >
+                {showCategories && (
+                  <div className="min-w-0 flex-1 basis-full lg:basis-0">
+                    <CategoryTabs
+                      categories={categories}
+                      activeTab={activeCategory}
+                      isLoading={categoriesQuery.isLoading}
+                      onChange={handleTabChange}
+                    />
+                  </div>
                 )}
-                {!schoolMode && <SortDropdown value={sort} onChange={handleSortChange} />}
+                <div className="ms-auto flex shrink-0 items-center gap-1.5">
+                  {!schoolMode && (
+                    <MineFilterToggle checked={mine === 1} onCheckedChange={handleMineChange} />
+                  )}
+                  {!schoolMode && <SortDropdown value={sort} onChange={handleSortChange} />}
+                </div>
               </div>
             </div>
           </div>
           <div
             ref={scrollContainerRef}
-            className="min-h-0 flex-1 scrollbar-gutter-stable overflow-x-hidden overflow-y-auto p-3"
+            className={`min-h-0 flex-1 scrollbar-gutter-stable overflow-x-hidden overflow-y-auto ${schoolMode ? 'py-3' : 'p-3'}`}
           >
             {/* Deliberately unkeyed: the grid's own `scopeKey` already carries the category,
                 so it replaces the results itself and hands focus back when the scope
@@ -190,16 +194,19 @@ const AgentMarketplace: React.FC<AgentMarketplaceProps> = ({ className = '' }) =
                 dialog and its return target, and the replacement grid starts with an empty
                 `previousScopeKeyRef`, so it reads that render as a first mount and leaves
                 focus on the document. */}
-            <SchoolHome />
-            {showCards && (
-              <AgentGrid
-                category={activeCategory}
-                searchQuery={searchQuery}
-                scrollElementRef={scrollContainerRef}
-                sort={sort}
-                mine={mine}
-              />
-            )}
+            <div className={schoolMode ? 'mx-auto w-full max-w-5xl px-3 sm:px-6' : undefined}>
+              <SchoolHome>
+                {showCards && (
+                  <AgentGrid
+                    category={activeCategory}
+                    searchQuery={searchQuery}
+                    scrollElementRef={scrollContainerRef}
+                    sort={sort}
+                    mine={mine}
+                  />
+                )}
+              </SchoolHome>
+            </div>
           </div>
         </main>
       </SidePanelGroup>

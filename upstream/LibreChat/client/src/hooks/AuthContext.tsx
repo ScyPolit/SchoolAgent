@@ -377,8 +377,13 @@ const AuthContextProvider = ({
               : rawPath;
           const currentUrl = `${strippedPath}${window.location.search}`;
           const fallbackRedirect = isSafeRedirect(currentUrl) ? currentUrl : '/c/new';
+          // A campus guest opens the public shell without completing account sign-in.
+          // Preserve auth forms and their pending destination until a real account signs in.
           const redirect =
-            getPostLoginRedirect(new URLSearchParams(window.location.search)) ?? fallbackRedirect;
+            user?.provider === 'school-guest'
+              ? undefined
+              : (getPostLoginRedirect(new URLSearchParams(window.location.search)) ??
+                fallbackRedirect);
           setUserContext({ user, token, isAuthenticated: true, redirect });
           return;
         }

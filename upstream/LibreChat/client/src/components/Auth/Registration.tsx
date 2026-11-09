@@ -55,7 +55,9 @@ const Registration: React.FC = () => {
     },
     onSuccess: (data) => {
       setIsSubmitting(false);
-      if ('mailSent' in data && data.mailSent === false) {
+      const verificationSkipped =
+        'verificationRequired' in data && data.verificationRequired === false;
+      if ('mailSent' in data && data.mailSent === false && !verificationSkipped) {
         setMailFailed(true);
         setErrorMessage(data.message);
         setCountdown(0);

@@ -1,28 +1,32 @@
 import { useNavigate } from 'react-router-dom';
 import { Button, Alert } from '@librechat/client';
+import type { ReactNode } from 'react';
 import { contentText, safeSchoolHref, useSchoolBootstrap } from './api';
 import { useLocalize } from '~/hooks';
 
 /** School content added to the original Agent Marketplace, without replacing its cards or navigation. */
-export default function SchoolHome() {
+export default function SchoolHome({ children }: { children?: ReactNode }) {
   const { data, error, refetch } = useSchoolBootstrap();
   const localize = useLocalize();
   const navigate = useNavigate();
   if (error instanceof Error)
     return (
-      <Alert variant="error">
-        {error.message}
-        <Button variant="outline" onClick={() => void refetch()}>
-          {localize('com_school_refresh')}
-        </Button>
-      </Alert>
+      <>
+        <Alert variant="error">
+          {error.message}
+          <Button variant="outline" onClick={() => void refetch()}>
+            {localize('com_school_refresh')}
+          </Button>
+        </Alert>
+        {children}
+      </>
     );
-  if (!data) return null;
+  if (!data) return <>{children}</>;
   const hp = data.homepage,
     m = hp.modules || {};
   return (
     <section
-      className="text-text-primary mx-auto mb-6 flex max-w-5xl flex-col gap-5"
+      className="text-text-primary flex min-w-0 flex-col gap-5 pb-6"
       aria-label={hp.platformName}
     >
       <div className="py-4">
@@ -30,7 +34,9 @@ export default function SchoolHome() {
         {hp.logo && safeSchoolHref(hp.logo) && (
           <img className="mb-4 h-12 w-auto" src={safeSchoolHref(hp.logo)} alt={hp.schoolName} />
         )}
-        <h2 className="text-text-primary text-2xl font-semibold">{hp.welcome}</h2>
+        <h2 className="text-text-primary text-2xl leading-tight font-semibold sm:text-3xl">
+          {hp.welcome}
+        </h2>
         <p className="text-text-secondary mt-2 text-sm">{hp.subtitle}</p>
       </div>
       {!data.user && (
@@ -81,7 +87,7 @@ export default function SchoolHome() {
           </Alert>
         ))}
       {m.questions !== false && hp.questions.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 [&>button]:h-auto [&>button]:text-start [&>button]:whitespace-normal">
           {hp.questions.map((q, i) => {
             const agent =
               typeof q !== 'string' && q.agentId
@@ -105,6 +111,12 @@ export default function SchoolHome() {
           })}
         </div>
       )}
+      {children && (
+        <div className="min-w-0 py-2">
+          <h2 className="mb-4 text-lg font-semibold">{localize('com_school_chooseAgent')}</h2>
+          {children}
+        </div>
+      )}
       {m.faq !== false &&
         hp.faq.map((faq, i) => (
           <details className="border-border-light rounded-lg border p-3 text-sm" key={i}>
@@ -116,14 +128,14 @@ export default function SchoolHome() {
             </p>
           </details>
         ))}
-      {m.help !== false && hp.help && (
-        <p className="text-text-secondary text-sm leading-relaxed">{hp.help}</p>
-      )}
-      {m.contact !== false && hp.contact && (
-        <p className="text-text-secondary text-xs">{hp.contact}</p>
-      )}
-      {m.footer !== false && hp.footer && (
-        <p className="text-text-secondary text-xs">{hp.footer}</p>
+      {((m.help !== false && hp.help) ||
+        (m.contact !== false && hp.contact) ||
+        (m.footer !== false && hp.footer)) && (
+        <footer className="border-border-light text-text-secondary flex flex-col gap-2 border-t pt-4 text-xs leading-relaxed">
+          {m.help !== false && hp.help && <p>{hp.help}</p>}
+          {m.contact !== false && hp.contact && <p>{hp.contact}</p>}
+          {m.footer !== false && hp.footer && <p>{hp.footer}</p>}
+        </footer>
       )}
     </section>
   );

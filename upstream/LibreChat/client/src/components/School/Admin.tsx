@@ -34,6 +34,7 @@ type Catalog = {
 };
 type Field = {
   key: string;
+  label?: string;
   kind?:
     | 'text'
     | 'password'
@@ -132,7 +133,7 @@ function FieldControl({
   onChange: (value: unknown) => void;
 }) {
   const t = useText();
-  const label = t(field.key);
+  const label = field.label || t(field.key);
   let control: ReactNode;
   if (field.kind === 'content') {
     control = (
@@ -339,6 +340,22 @@ function Editor({
           >
             {mutation.error instanceof Error && (
               <Alert variant="error">{mutation.error.message}</Alert>
+            )}
+            {path === '/admin/settings/smtp' && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  setForm((prev) => ({
+                    ...prev,
+                    host: 'smtp.qq.com',
+                    port: 465,
+                    encryption: 'tls',
+                  }))
+                }
+              >
+                {t('qqSmtpPreset')}
+              </Button>
             )}
             {previewPath && (
               <>
@@ -1198,7 +1215,8 @@ function SettingsPage({
     { onSuccess: setResult },
   );
   const groups = catalog.groups.map((g) => ({ value: g.id, label: g.name }));
-  const keys = page === 'homepage' ? ['homepage'] : ['smtp', 'retention', 'defaults'];
+  const keys =
+    page === 'homepage' ? ['homepage'] : ['registration', 'smtp', 'retention', 'defaults'];
   function fields(key: string): Field[] {
     if (key === 'homepage')
       return [
@@ -1224,8 +1242,8 @@ function SettingsPage({
       ];
     if (key === 'smtp')
       return [
-        { key: 'host' },
-        { key: 'port', kind: 'number' },
+        { key: 'host', hint: t('smtpHostHint') },
+        { key: 'port', kind: 'number', hint: t('smtpPortHint') },
         {
           key: 'encryption',
           kind: 'select',
@@ -1235,11 +1253,13 @@ function SettingsPage({
             ['none', 'smtpNone'],
           ].map(([value, label]) => ({ value, label: t(label) })),
         },
-        { key: 'from' },
-        { key: 'username' },
-        { key: 'password', kind: 'password', hint: t('secretHint'), maxLength: 16000 },
+        { key: 'from', label: t('smtpFrom'), hint: t('smtpFromHint'), maxLength: 512 },
+        { key: 'username', hint: t('smtpUsernameHint') },
+        { key: 'password', kind: 'password', hint: t('smtpPasswordHint'), maxLength: 16000 },
         { key: 'clearPassword', kind: 'boolean' },
       ];
+    if (key === 'registration')
+      return [{ key: 'requireEmailVerification', kind: 'boolean', hint: t('registrationHint') }];
     if (key === 'retention')
       return ['guestBrowserDays', 'guestServerDays', 'usageDays', 'auditDays', 'shareDays']
         .map((key) => ({ key, kind: 'duration' }) as Field)
@@ -1262,6 +1282,15 @@ function SettingsPage({
           <Section key={key} heading={t(key)}>
             <div className="flex flex-col gap-4 px-4 py-3">
               <p className="text-text-secondary text-sm leading-relaxed">{t(key + 'Hint')}</p>
+              {key === 'registration' && (
+                <p className="text-text-primary text-sm font-medium">
+                  {t(
+                    object(data.data?.registration).requireEmailVerification === true
+                      ? 'verificationEnabled'
+                      : 'verificationDisabled',
+                  )}
+                </p>
+              )}
               <Button
                 variant="outline"
                 disabled={
@@ -1284,7 +1313,10 @@ function SettingsPage({
                   <Button
                     variant="outline"
                     disabled={!to || action.isLoading}
-                    onClick={() => action.mutate({ path: '/admin/smtp/test', body: { to } })}
+                    onClick={() => {
+                      setResult(null);
+                      action.mutate({ path: '/admin/smtp/test', body: { to } });
+                    }}
                   >
                     {t('testMail')}
                   </Button>
@@ -1305,9 +1337,13 @@ function SettingsPage({
           </Section>
         ))}
       {action.error instanceof Error && <Alert variant="error">{action.error.message}</Alert>}
-      {result != null && (
+      {result != null && !action.isLoading && !action.isError && (
         <Alert variant="neutral">
-          <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(result, null, 2)}</pre>
+          {object(result).mailSent === true && typeof object(result).message === 'string' ? (
+            <p className="text-sm">{text(object(result).message)}</p>
+          ) : (
+            <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(result, null, 2)}</pre>
+          )}
         </Alert>
       )}
       {editing && (

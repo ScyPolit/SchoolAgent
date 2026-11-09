@@ -8,7 +8,7 @@ process.env.NODE_ENV='test';
 process.env.ENABLE_DEMO_ADAPTER='true';
 process.env.ENCRYPTION_KEY=randomBytes(32).toString('hex');
 const {createApp}=await import('../server/index.js');
-const {db,run,get,id,now,parse,setting}=await import('../server/db.js');
+const {db,run,get,id,now,parse,setting,setSetting}=await import('../server/db.js');
 const {hashPassword,hashToken}=await import('../server/security.js');
 const app=createApp();
 const server=app.listen(0,'127.0.0.1');
@@ -25,7 +25,24 @@ function client(){
 }
 test.after(()=>{server.close();db.close();});
 const password='a-unique-long-test-password';
+test('verification defaults off for fresh and existing databases; unverified accounts can log in without SMTP',async()=>{
+ assert.deepEqual(setting('registration'),{requireEmailVerification:false});
+ run("DELETE FROM settings WHERE key='registration'");
+ const {initCoreSchema}=await import('../server/db.js');initCoreSchema();
+ assert.deepEqual(setting('registration'),{requireEmailVerification:false});
+ const request=client();const created=await request('/auth/register','POST',{email:'no-mail@example.test',name:'无需收信',password});
+ assert.equal(created.status,201);assert.equal(created.body.mailSent,false);assert.equal(created.body.verificationRequired,false);
+ const user=get('SELECT * FROM users WHERE email=?','no-mail@example.test');
+ assert.equal(user.email_verified,0);assert.equal(get('SELECT count(*) count FROM email_tokens WHERE user_id=?',user.id).count,0);
+ assert.equal((await request('/auth/login','POST',{email:user.email,password})).status,200);
+ setSetting('registration',{requireEmailVerification:true});
+ assert.equal((await request('/auth/login','POST',{email:user.email,password})).body.code,'EMAIL_NOT_VERIFIED');
+ setSetting('registration',{requireEmailVerification:false});
+ assert.equal((await request('/auth/resend-verification','POST',{email:user.email})).body.verificationRequired,false);
+ assert.equal((await request('/auth/login','POST',{email:user.email,password})).status,200);
+});
 test('registration never says mail was sent when SMTP is missing; unverified user cannot login',async()=>{
+ setSetting('registration',{requireEmailVerification:true});
  const request=client();const result=await request('/auth/register','POST',{email:'new@example.test',name:'新用户',password});
  assert.equal(result.status,201);assert.equal(result.body.mailSent,false);
  assert.equal((await request('/auth/login','POST',{email:'new@example.test',password})).body.code,'EMAIL_NOT_VERIFIED');
@@ -51,6 +68,7 @@ test('restricted admin cannot change roles, credentials, default groups or read/
  const request=client();assert.equal((await request('/auth/login','POST',{email:'limited@example.test',password})).status,200);
  assert.equal((await request('/admin/users/'+userId,'PATCH',{permissions:['content_view']})).status,403);
  assert.equal((await request('/admin/groups/guest','PATCH',{agentIds:['*']})).status,403);
+ assert.equal((await request('/admin/settings/registration','PUT',{requireEmailVerification:false})).status,403);
  assert.equal((await request('/admin/integrations/dify','PATCH',{apiKey:'a-secret-that-must-not-leak'})).status,403);
  assert.equal((await request('/admin/conversations/unknown')).status,403);
  assert.equal((await request('/admin/conversations/unknown/export?format=md')).status,403);

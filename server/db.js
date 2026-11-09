@@ -38,6 +38,7 @@ export function initCoreSchema(){
  `);
  const initial = {
   homepage:{schoolName:'校园智慧服务',platformName:'校园智能体',logo:'',themeColor:'#047857',welcome:'你好，今天需要什么帮助？',subtitle:'让校园服务触手可及。选择智能体，开始一次高效的对话。',announcements:[{title:'欢迎使用校园智能体平台',content:'仅供校内网络或 VPN 访问。真实应用接入状态请查看智能体说明。',groups:[]}],banners:[],questions:['如何查找部门联系电话？','校园服务有哪些办理入口？','如何联系服务支持？'],faq:[{question:'可以在校外使用吗？',answer:'请先连接学校 VPN，所有入口均限校内网络访问。'},{question:'游客的聊天会保存多久？',answer:'当前浏览器默认保留访问权限 7 天；服务器正文按学校保留策略管理。'}],help:'选择智能体即可提问。请勿输入与问题无关的个人敏感信息。',contact:'请由学校管理员配置服务联系方式',footer:'校园智能体 · 让服务更有温度',modules:{announcements:true,banners:true,recommended:true,categories:true,cards:true,questions:true,faq:true,help:true,contact:true,footer:true}},
+  registration:{requireEmailVerification:false},
   retention:{guestBrowserDays:7,guestServerDays:180,usageDays:180,auditDays:180,shareDays:7},defaults:{guestGroupId:'guest',userGroupId:'member'},smtp:{host:process.env.SMTP_HOST||'',port:Number(process.env.SMTP_PORT)||587,encryption:process.env.SMTP_ENCRYPTION||'starttls',from:process.env.SMTP_FROM||'',username:'',password:''}
  };
  for(const [key,value] of Object.entries(initial)) if(!get('SELECT key FROM settings WHERE key=?',key)) setSetting(key,value);

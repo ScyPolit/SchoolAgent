@@ -463,7 +463,7 @@ export default function VirtualizedAgentGrid({
   const rows = windowed
     ? virtualRows
     : Array.from({ length: rowCount }, (_, index) => ({ index, key: getItemKey(index), start: 0 }));
-  const columns = `repeat(${layout.columns}, minmax(0, 1fr))`;
+  const columns = `repeat(${Math.max(1, Math.min(layout.columns, agents.length))}, minmax(0, 1fr))`;
 
   return (
     <OGDialog

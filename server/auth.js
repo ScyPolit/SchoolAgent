@@ -22,8 +22,9 @@ authRouter.post('/auth/register',async(req,res)=>{
  const passwordHash=await hashPassword(body.password);const user={id:id('u_'),...body};
  transaction(()=>{run('INSERT INTO users(id,email,name,password_hash,created_at) VALUES(?,?,?,?,?)',user.id,user.email,user.name,passwordHash,now());run('INSERT INTO user_groups(user_id,group_id) VALUES(?,?)',user.id,setting('defaults').userGroupId);});
  audit(req,'account.register',user.id);
- try{await sendAccountMail(user,'verify');res.status(201).json({mailSent:true,message:'账号已创建，SMTP 已接受验证邮件。请检查邮箱并完成验证。'});}
- catch(error){res.status(201).json({mailSent:false,code:error.code||'SMTP_SEND_FAILED',message:'账号已创建，但验证邮件未能发送。请联系管理员配置邮件后重新发送。'});}
+ if(setting('registration').requireEmailVerification!==true)return res.status(201).json({mailSent:false,verificationRequired:false,message:'账号已创建，无需验证邮箱，现在可以直接登录。'});
+ try{await sendAccountMail(user,'verify');res.status(201).json({mailSent:true,verificationRequired:true,message:'账号已创建，SMTP 已接受验证邮件。请检查邮箱并完成验证。'});}
+ catch(error){res.status(201).json({mailSent:false,verificationRequired:true,code:error.code||'SMTP_SEND_FAILED',message:'账号已创建，但验证邮件未能发送。请联系管理员配置邮件后重新发送。'});}
 });
 authRouter.post('/auth/login',async(req,res)=>{
  guard(req,'login',25,15*60000);
@@ -31,7 +32,7 @@ authRouter.post('/auth/login',async(req,res)=>{
  const success=user&&await verifyPassword(body.password,user.password_hash);
  if(!success){audit(req,'auth.login_failed','login',{outcome:'invalid_credentials'});throw new HttpError(401,'邮箱或密码不正确','INVALID_CREDENTIALS');}
  if(!user.active)throw new HttpError(403,'账号已停用，请联系管理员','ACCOUNT_DISABLED');
- if(!user.email_verified)throw new HttpError(403,'请先验证邮箱，可重新发送验证邮件','EMAIL_NOT_VERIFIED');
+ if(setting('registration').requireEmailVerification===true&&!user.email_verified)throw new HttpError(403,'请先验证邮箱，可重新发送验证邮件','EMAIL_NOT_VERIFIED');
  const token=randomBytes(32).toString('base64url');run('INSERT INTO sessions(id,user_id,version,created_at,expires_at) VALUES(?,?,?,?,?)',hashToken(token),user.id,user.session_version,now(),now()+30*86400000);setLoginCookie(res,token);
  audit({...req,user,identity:{id:user.id}},'auth.login',user.id,{outcome:'success'});
  const migrationCount=guestConversationCount(req.guestId);
@@ -42,7 +43,9 @@ authRouter.post('/auth/logout',(req,res)=>{
  audit(req,'auth.logout',req.identity.id);res.clearCookie('school_session',cookieOptions());res.json({message:'已退出登录'});
 });
 authRouter.post('/auth/resend-verification',async(req,res)=>{
- guard(req,'mail',8,15*60000);const email=emailSchema.parse(req.body.email);const user=get('SELECT * FROM users WHERE email=?',email);
+ guard(req,'mail',8,15*60000);const email=emailSchema.parse(req.body.email);
+ if(setting('registration').requireEmailVerification!==true)return res.json({mailSent:false,verificationRequired:false,message:'当前无需验证邮箱，请直接登录。'});
+ const user=get('SELECT * FROM users WHERE email=?',email);
  if(!user||!user.active||user.email_verified)return res.json({mailSent:false,message:'若账号存在且需要验证，可在邮件服务可用时发送验证邮件。'});
  await sendAccountMail(user,'verify');res.json({mailSent:true,message:'SMTP 已接受验证邮件，请检查收件箱。'});
 });
